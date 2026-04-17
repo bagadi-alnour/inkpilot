@@ -6,8 +6,9 @@ import type {
   SEOAnalysis,
 } from '@writeflow/types';
 import { I18nContext, createI18nValue } from '@writeflow/i18n';
-import { applyTheme } from '@writeflow/theme';
 import { generateSERPPreview } from '@writeflow/seo';
+import { processImage } from '@writeflow/image';
+import { useStorage } from './hooks/use-storage';
 import { getContent } from '@writeflow/core';
 import { WriteFlowContext } from './context';
 import { useWriteFlowEditor } from './hooks/use-editor';
@@ -74,6 +75,7 @@ export function Editor(props: EditorProps) {
   const aiRewrite = useAIRewrite(editor, ai);
   const seoAnalysis = useSEOAnalysis(editor, seo, ai, signals);
   const { theme: resolvedTheme } = useTheme(theme, containerRef);
+  const { upload: storageUpload } = useStorage(storage);
 
   const i18nValue = useMemo(
     () => createI18nValue(locale ?? i18nConfig?.locale ?? 'en', i18nConfig?.translations),
@@ -88,23 +90,44 @@ export function Editor(props: EditorProps) {
   }, [editor, currentContent, seoAnalysis.analysis, onPublish]);
 
   const serpPreview = useMemo(() => {
-    if (!currentContent) return undefined;
-    const title = currentContent.text.split('\n')[0] ?? '';
+    if (!currentContent || !editor) return undefined;
+    let title = '';
+    editor.state.doc.descendants((node) => {
+      if (!title && node.type.name === 'heading' && node.attrs.level === 1) {
+        title = node.textContent;
+      }
+      return !title;
+    });
     const description = currentContent.text.slice(0, 160);
     return generateSERPPreview(title, description);
-  }, [currentContent]);
+  }, [currentContent, editor]);
 
   const handleImageInsert = useCallback(
-    (file: File) => {
+    async (file: File) => {
       if (!editor) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        editor.chain().focus().setImage({ src: dataUrl, alt: file.name }).run();
-      };
-      reader.readAsDataURL(file);
+      const alt = file.name.replace(/\.[^.]+$/, '');
+
+      try {
+        const result = await processImage(file, { config: props.image });
+        const processed = result.compressed ?? result.original;
+
+        if (storage) {
+          const blob = processed.blob;
+          const uploadFile = blob instanceof File
+            ? blob
+            : new File([blob], file.name, { type: blob.type || file.type });
+          const uploaded = await storageUpload(uploadFile, file.name);
+          const url = uploaded?.url ?? processed.url;
+          editor.chain().focus().setImage({ src: url, alt }).run();
+        } else {
+          editor.chain().focus().setImage({ src: processed.url, alt }).run();
+        }
+      } catch {
+        const fallbackUrl = URL.createObjectURL(file);
+        editor.chain().focus().setImage({ src: fallbackUrl, alt }).run();
+      }
     },
-    [editor],
+    [editor, props.image, storage, storageUpload],
   );
 
   const ctxValue = useMemo(

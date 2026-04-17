@@ -1,7 +1,8 @@
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
-import type { StorageConfig } from '@writeflow/types';
-import type { ImageConfig } from '@writeflow/types';
+import type { StorageConfig, ImageConfig } from '@writeflow/types';
+import { processImage } from '@writeflow/image';
+import { createStorageAdapter } from '@writeflow/storage';
 
 export interface ImageUploadOptions {
   storage?: StorageConfig;
@@ -37,6 +38,44 @@ export const ImageUploadExtension = Extension.create<ImageUploadOptions>({
     const editor = this.editor;
     const opts = this.options;
 
+    const storageAdapter = opts.storage ? createStorageAdapter(opts.storage) : null;
+
+    async function handleFile(file: File) {
+      opts.onUploadStart?.(file);
+
+      try {
+        const result = await processImage(file, {
+          config: opts.image,
+          storage: storageAdapter ?? undefined,
+        });
+
+        const processed = result.compressed ?? result.original;
+        let url: string;
+
+        if (storageAdapter) {
+          const blob = processed.blob;
+          const uploadFile = blob instanceof File
+            ? blob
+            : new File([blob], file.name, { type: blob.type || file.type });
+          const uploaded = await storageAdapter.put(uploadFile, file.name);
+          url = uploaded.url;
+        } else {
+          url = processed.url;
+        }
+
+        const alt = file.name.replace(/\.[^.]+$/, '');
+        editor.chain().focus().setImage({ src: url, alt }).run();
+        opts.onUploadComplete?.(url);
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error('Image processing failed');
+        opts.onUploadError?.(error);
+
+        const fallbackUrl = URL.createObjectURL(file);
+        const alt = file.name.replace(/\.[^.]+$/, '');
+        editor.chain().focus().setImage({ src: fallbackUrl, alt }).run();
+      }
+    }
+
     return [
       new Plugin({
         key: imageUploadPluginKey,
@@ -51,9 +90,7 @@ export const ImageUploadExtension = Extension.create<ImageUploadOptions>({
             event.preventDefault();
 
             for (const file of imageFiles) {
-              opts.onUploadStart?.(file);
-              const url = URL.createObjectURL(file);
-              editor.chain().focus().setImage({ src: url, alt: '' }).run();
+              void handleFile(file);
             }
 
             return true;
@@ -69,9 +106,7 @@ export const ImageUploadExtension = Extension.create<ImageUploadOptions>({
             event.preventDefault();
 
             for (const file of imageFiles) {
-              opts.onUploadStart?.(file);
-              const url = URL.createObjectURL(file);
-              editor.chain().focus().setImage({ src: url, alt: '' }).run();
+              void handleFile(file);
             }
 
             return true;

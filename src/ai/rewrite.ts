@@ -35,6 +35,7 @@ export async function executeRewrite(
       tone,
       intent,
       preserveMeaning,
+      signal: controller.signal,
     });
 
     let accumulated = '';

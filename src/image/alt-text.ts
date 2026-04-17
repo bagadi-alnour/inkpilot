@@ -8,10 +8,10 @@ export async function suggestAltText(
   if (!aiProvider) return null;
 
   try {
-    const suggestions = await aiProvider.suggestTitle(
-      `Generate a concise, descriptive alt text for an image in the following context:\n\n${context}\n\nImage URL: ${imageUrl}`,
+    const result = await aiProvider.suggestMeta(
+      `Generate a concise, descriptive alt text (max 125 characters) for an image. The image appears in the following context:\n\n${context}\n\nReturn only the alt text, nothing else.`,
     );
-    return suggestions[0] ?? null;
+    return result || null;
   } catch {
     return null;
   }

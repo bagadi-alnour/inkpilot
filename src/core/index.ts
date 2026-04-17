@@ -6,6 +6,7 @@ export { createEventEmitter } from './events';
 export {
   createWriteFlowKit,
   AIRewriteExtension,
+  aiRewritePluginKey,
   SEOSignalsExtension,
   ImageUploadExtension,
   KeyboardShortcutsExtension,

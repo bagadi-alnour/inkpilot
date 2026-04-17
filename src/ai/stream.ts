@@ -1,6 +1,7 @@
 export interface StreamController {
   abort(): void;
   isAborted(): boolean;
+  signal: AbortSignal;
 }
 
 export function createStreamController(): StreamController {
@@ -13,6 +14,7 @@ export function createStreamController(): StreamController {
     isAborted() {
       return controller.signal.aborted;
     },
+    signal: controller.signal,
   };
 }
 

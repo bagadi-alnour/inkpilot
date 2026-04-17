@@ -20,6 +20,7 @@ export function createAnthropicAdapter(config: AIConfig): AIProviderAdapter {
         prompt,
         maxTokens: 2000,
         temperature: 0.7,
+        abortSignal: params.signal,
       });
 
       for await (const chunk of (await result).textStream) {
@@ -39,6 +40,7 @@ export function createAnthropicAdapter(config: AIConfig): AIProviderAdapter {
         prompt,
         maxTokens: 4000,
         temperature: 0.7,
+        abortSignal: params.signal,
       });
 
       for await (const chunk of (await result).textStream) {

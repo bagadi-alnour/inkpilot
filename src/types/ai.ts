@@ -34,12 +34,14 @@ export interface RewriteParams {
   tone: AITone;
   intent: AIIntent;
   preserveMeaning: boolean;
+  signal?: AbortSignal;
 }
 
 export interface RestructureParams {
   fullContent: string;
   headingStructure: HeadingNode[];
   instructions?: string;
+  signal?: AbortSignal;
 }
 
 export interface HeadingNode {

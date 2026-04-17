@@ -9,10 +9,19 @@ export interface AIRewriteState {
   originalText: string;
 }
 
-const aiRewritePluginKey = new PluginKey('aiRewrite');
+export const aiRewritePluginKey = new PluginKey('aiRewrite');
 
 export interface AIRewriteExtensionOptions {
   enabled: boolean;
+}
+
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    aiRewrite: {
+      setAIRewriteState: (state: AIRewriteState) => ReturnType;
+      clearAIRewriteState: () => ReturnType;
+    };
+  }
 }
 
 export const AIRewriteExtension = Extension.create<AIRewriteExtensionOptions>({
@@ -27,6 +36,25 @@ export const AIRewriteExtension = Extension.create<AIRewriteExtensionOptions>({
   addStorage() {
     return {
       rewriteState: null as AIRewriteState | null,
+    };
+  },
+
+  addCommands() {
+    return {
+      setAIRewriteState:
+        (rewriteState: AIRewriteState) =>
+        ({ editor }) => {
+          this.storage.rewriteState = rewriteState;
+          editor.view.dispatch(editor.state.tr.setMeta(aiRewritePluginKey, rewriteState));
+          return true;
+        },
+      clearAIRewriteState:
+        () =>
+        ({ editor }) => {
+          this.storage.rewriteState = null;
+          editor.view.dispatch(editor.state.tr.setMeta(aiRewritePluginKey, null));
+          return true;
+        },
     };
   },
 

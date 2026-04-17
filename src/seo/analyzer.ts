@@ -1,6 +1,5 @@
 import type { Editor } from '@tiptap/core';
 import type { SEOConfig, SEOAnalysis, SEOIssue, SEOSuggestion, AIProviderAdapter } from '@writeflow/types';
-import { computeSignals } from '@writeflow/core';
 import { analyzeHeadings } from './rules/heading';
 import { analyzeTitle } from './rules/title';
 import { analyzeAltTexts } from './rules/alt-text';

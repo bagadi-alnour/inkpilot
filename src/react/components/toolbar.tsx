@@ -4,7 +4,7 @@ import { useTranslation } from '@writeflow/i18n';
 
 interface ToolbarProps {
   editor: Editor | null;
-  onImageInsert?: (file: File) => void;
+  onImageInsert?: (file: File) => void | Promise<void>;
 }
 
 function ToolbarButton({
