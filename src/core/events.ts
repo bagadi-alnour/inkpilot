@@ -1,27 +1,21 @@
 import type { EditorEventMap, EditorEventName, EditorEventHandler, EditorEvents } from '@writeflow/types';
 
-type ListenerMap = {
-  [K in EditorEventName]?: Set<EditorEventHandler<K>>;
-};
-
 export function createEventEmitter(): EditorEvents {
-  const listeners: ListenerMap = {};
+  const listeners: Partial<Record<EditorEventName, Set<(payload: unknown) => void>>> = {};
 
   return {
     on<T extends EditorEventName>(event: T, handler: EditorEventHandler<T>) {
-      if (!listeners[event]) {
-        listeners[event] = new Set() as ListenerMap[T];
-      }
-      (listeners[event] as Set<EditorEventHandler<T>>).add(handler);
+      const set = (listeners[event] ??= new Set());
+      set.add(handler as (payload: unknown) => void);
     },
 
     off<T extends EditorEventName>(event: T, handler: EditorEventHandler<T>) {
-      (listeners[event] as Set<EditorEventHandler<T>> | undefined)?.delete(handler);
+      listeners[event]?.delete(handler as (payload: unknown) => void);
     },
 
     emit<T extends EditorEventName>(event: T, payload: EditorEventMap[T]) {
-      (listeners[event] as Set<EditorEventHandler<T>> | undefined)?.forEach((handler) => {
-        handler(payload);
+      listeners[event]?.forEach((handler) => {
+        (handler as (p: EditorEventMap[T]) => void)(payload);
       });
     },
   };

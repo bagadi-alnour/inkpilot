@@ -91,7 +91,17 @@ export class S3StorageAdapter implements StorageAdapter {
       new GetObjectCommand({ Bucket: this.config.bucket, Key: key }),
     );
 
-    return (await response.Body?.transformToString()) ?? '';
+    const body = response.Body as unknown;
+    if (
+      body &&
+      typeof body === 'object' &&
+      'transformToString' in body &&
+      typeof (body as { transformToString?: unknown }).transformToString === 'function'
+    ) {
+      return await (body as { transformToString: () => Promise<string> }).transformToString();
+    }
+
+    return '';
   }
 
   async delete(key: string): Promise<void> {

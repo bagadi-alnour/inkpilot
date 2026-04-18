@@ -6,7 +6,6 @@ export function analyzeKeyword(
   title: string,
   headings: string[],
 ): KeywordResult {
-  const lowerText = text.toLowerCase();
   const lowerKeyword = keyword.toLowerCase();
   const words = text.split(/\s+/).filter((w) => w.length > 0);
   const totalWords = words.length || 1;

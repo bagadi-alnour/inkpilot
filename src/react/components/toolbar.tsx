@@ -51,7 +51,7 @@ export function Toolbar({ editor, onImageInsert }: ToolbarProps) {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file && onImageInsert) {
-        onImageInsert(file);
+        void onImageInsert(file);
       }
       e.target.value = '';
     },

@@ -33,7 +33,7 @@ export function ImageUploadButton({ onUpload, isUploading, progress }: ImageUplo
         className="wf-toolbar-btn"
         onClick={handleClick}
         disabled={isUploading}
-        title={t('toolbar.image')}
+        title={isUploading ? `${t('toolbar.image')} (${Math.round(progress)}%)` : t('toolbar.image')}
         aria-label={t('toolbar.image')}
       >
         {isUploading ? <span className="wf-spinner" /> : '🖼'}

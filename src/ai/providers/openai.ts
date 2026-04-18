@@ -23,7 +23,7 @@ export function createOpenAIAdapter(config: AIConfig): AIProviderAdapter {
         abortSignal: params.signal,
       });
 
-      for await (const chunk of (await result).textStream) {
+      for await (const chunk of result.textStream) {
         yield chunk;
       }
     },
@@ -43,7 +43,7 @@ export function createOpenAIAdapter(config: AIConfig): AIProviderAdapter {
         abortSignal: params.signal,
       });
 
-      for await (const chunk of (await result).textStream) {
+      for await (const chunk of result.textStream) {
         yield chunk;
       }
     },
@@ -59,7 +59,7 @@ export function createOpenAIAdapter(config: AIConfig): AIProviderAdapter {
       });
 
       let text = '';
-      for await (const chunk of (await result).textStream) {
+      for await (const chunk of result.textStream) {
         text += chunk;
       }
 
@@ -81,7 +81,7 @@ export function createOpenAIAdapter(config: AIConfig): AIProviderAdapter {
       });
 
       let text = '';
-      for await (const chunk of (await result).textStream) {
+      for await (const chunk of result.textStream) {
         text += chunk;
       }
 

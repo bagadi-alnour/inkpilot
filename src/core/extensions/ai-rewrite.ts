@@ -40,18 +40,19 @@ export const AIRewriteExtension = Extension.create<AIRewriteExtensionOptions>({
   },
 
   addCommands() {
+    const storage = this.storage as { rewriteState: AIRewriteState | null };
     return {
       setAIRewriteState:
         (rewriteState: AIRewriteState) =>
         ({ editor }) => {
-          this.storage.rewriteState = rewriteState;
+          storage.rewriteState = rewriteState;
           editor.view.dispatch(editor.state.tr.setMeta(aiRewritePluginKey, rewriteState));
           return true;
         },
       clearAIRewriteState:
         () =>
         ({ editor }) => {
-          this.storage.rewriteState = null;
+          storage.rewriteState = null;
           editor.view.dispatch(editor.state.tr.setMeta(aiRewritePluginKey, null));
           return true;
         },

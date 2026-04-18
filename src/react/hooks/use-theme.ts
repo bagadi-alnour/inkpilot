@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { ThemeConfig, ThemePreset, ResolvedTheme } from '@writeflow/types';
 import { applyTheme, resolveTheme } from '@writeflow/theme';
 

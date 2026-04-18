@@ -1,15 +1,10 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { EditorContent } from '@tiptap/react';
-import type {
-  EditorConfig,
-  EditorContent as EditorContentType,
-  SEOAnalysis,
-} from '@writeflow/types';
+import type { EditorConfig } from '@writeflow/types';
 import { I18nContext, createI18nValue } from '@writeflow/i18n';
 import { generateSERPPreview } from '@writeflow/seo';
 import { processImage } from '@writeflow/image';
 import { useStorage } from './hooks/use-storage';
-import { getContent } from '@writeflow/core';
 import { WriteFlowContext } from './context';
 import { useWriteFlowEditor } from './hooks/use-editor';
 import { useAIRewrite } from './hooks/use-ai-rewrite';
@@ -51,13 +46,6 @@ export function Editor(props: EditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [showSEOPanel, setShowSEOPanel] = useState(false);
 
-  const handlePublishTrigger = useCallback(() => {
-    if (seo?.prePublishPanel !== false) {
-      setShowSEOPanel(true);
-      void seoAnalysis.runAnalysis();
-    }
-  }, [seo]);
-
   const { editor, content: currentContent, signals } = useWriteFlowEditor({
     ai,
     storage,
@@ -69,13 +57,23 @@ export function Editor(props: EditorProps) {
     autoFocus,
     readOnly,
     onRewrite: undefined,
-    onPublish: handlePublishTrigger,
+    onPublish: () => {
+      if (seo?.prePublishPanel !== false) {
+        setShowSEOPanel(true);
+      }
+    },
   });
 
   const aiRewrite = useAIRewrite(editor, ai);
   const seoAnalysis = useSEOAnalysis(editor, seo, ai, signals);
   const { theme: resolvedTheme } = useTheme(theme, containerRef);
   const { upload: storageUpload } = useStorage(storage);
+
+  useEffect(() => {
+    if (showSEOPanel) {
+      void seoAnalysis.runAnalysis();
+    }
+  }, [showSEOPanel, seoAnalysis]);
 
   const i18nValue = useMemo(
     () => createI18nValue(locale ?? i18nConfig?.locale ?? 'en', i18nConfig?.translations),
@@ -92,12 +90,15 @@ export function Editor(props: EditorProps) {
   const serpPreview = useMemo(() => {
     if (!currentContent || !editor) return undefined;
     let title = '';
-    editor.state.doc.descendants((node) => {
-      if (!title && node.type.name === 'heading' && node.attrs.level === 1) {
-        title = node.textContent;
-      }
-      return !title;
-    });
+    const doc = editor.state?.doc;
+    if (doc?.descendants) {
+      doc.descendants((node) => {
+        if (!title && node.type.name === 'heading' && node.attrs.level === 1) {
+          title = node.textContent;
+        }
+        return !title;
+      });
+    }
     const description = currentContent.text.slice(0, 160);
     return generateSERPPreview(title, description);
   }, [currentContent, editor]);

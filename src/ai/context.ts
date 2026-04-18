@@ -7,7 +7,6 @@ export function getSurroundingContext(
   to: number,
   windowSize = 500,
 ): { before: string; after: string } {
-  const text = editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n', '\n');
   const textBefore = editor.state.doc.textBetween(0, from, '\n', '\n');
   const textAfter = editor.state.doc.textBetween(to, editor.state.doc.content.size, '\n', '\n');
 

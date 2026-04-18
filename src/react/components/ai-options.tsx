@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { AITone, AIIntent } from '@writeflow/types';
 import { useTranslation } from '@writeflow/i18n';
 

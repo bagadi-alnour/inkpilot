@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useEditor as useTiptapEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
 import type { EditorConfig, EditorContent, SEOSignal } from '@writeflow/types';
@@ -32,6 +32,14 @@ export function useWriteFlowEditor(options: UseEditorOptions): UseEditorReturn {
   const onChangeRef = useRef(options.onChange);
   onChangeRef.current = options.onChange;
 
+  const debouncedOnChange = useMemo(
+    () =>
+      debounce((c: EditorContent) => {
+        onChangeRef.current?.(c);
+      }, 300),
+    [],
+  );
+
   const editor = useTiptapEditor({
     extensions: [
       ...createWriteFlowKit({ placeholder: options.placeholder }),
@@ -58,13 +66,6 @@ export function useWriteFlowEditor(options: UseEditorOptions): UseEditorReturn {
       debouncedOnChange(newContent);
     },
   });
-
-  const debouncedOnChange = useCallback(
-    debounce((c: EditorContent) => {
-      onChangeRef.current?.(c);
-    }, 300),
-    [],
-  );
 
   const setContent = useCallback(
     (html: string) => {
