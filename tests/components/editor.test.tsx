@@ -74,6 +74,14 @@ function getPlaceholderFromUseEditorConfig(): string | undefined {
   return placeholderExt?.options?.placeholder;
 }
 
+function getPublishHandlerFromUseEditorConfig(): (() => void) | undefined {
+  const ext = captureUseEditorConfig.last?.extensions as
+    | Array<{ name?: string; options?: { onPublish?: () => void } }>
+    | undefined;
+  const shortcutExt = ext?.find((e) => e?.name === 'inkpilotKeyboardShortcuts');
+  return shortcutExt?.options?.onPublish;
+}
+
 describe('Editor', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -92,7 +100,7 @@ describe('Editor', () => {
     const { container } = render(
       <Editor className="my-editor" style={{ maxWidth: 400 }} />,
     );
-    const root = container.querySelector('.writeflow-editor.my-editor');
+    const root = container.querySelector('.inkpilot-editor.my-editor');
     expect(root).toBeInTheDocument();
     expect(root).toHaveStyle({ maxWidth: '400px' });
   });
@@ -128,5 +136,26 @@ describe('Editor', () => {
   it('shows placeholder text via Placeholder extension config', () => {
     render(<Editor placeholder="Write your story here" />);
     expect(getPlaceholderFromUseEditorConfig()).toBe('Write your story here');
+  });
+
+  it('publishes directly when SEO config is omitted', async () => {
+    const onPublish = vi.fn();
+    render(<Editor onPublish={onPublish} />);
+
+    await act(async () => {
+      getPublishHandlerFromUseEditorConfig()?.();
+      await Promise.resolve();
+    });
+
+    expect(onPublish).toHaveBeenCalledTimes(1);
+    expect(onPublish.mock.calls[0][0]).toMatchObject({
+      html: '<p>Hello</p>',
+      text: expect.any(String),
+    });
+    expect(onPublish.mock.calls[0][1]).toEqual({
+      score: 0,
+      issues: [],
+      suggestions: [],
+    });
   });
 });

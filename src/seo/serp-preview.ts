@@ -1,4 +1,4 @@
-import type { SERPPreviewData } from '@writeflow/types';
+import type { SERPPreviewData } from '@inkpilot/types';
 
 export function generateSERPPreview(
   title: string,

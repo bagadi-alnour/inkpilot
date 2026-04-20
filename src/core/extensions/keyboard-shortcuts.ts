@@ -6,7 +6,7 @@ export interface KeyboardShortcutsOptions {
 }
 
 export const KeyboardShortcutsExtension = Extension.create<KeyboardShortcutsOptions>({
-  name: 'writeflowKeyboardShortcuts',
+  name: 'inkpilotKeyboardShortcuts',
 
   addOptions() {
     return {

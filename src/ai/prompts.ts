@@ -1,4 +1,4 @@
-import type { AITone, AIIntent } from '@writeflow/types';
+import type { AITone, AIIntent } from '@inkpilot/types';
 
 export function buildRewritePrompt(params: {
   selectedText: string;

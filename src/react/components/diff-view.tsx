@@ -1,4 +1,4 @@
-import type { DiffSegment } from '@writeflow/types';
+import type { DiffSegment } from '@inkpilot/types';
 
 interface DiffViewProps {
   segments: DiffSegment[];

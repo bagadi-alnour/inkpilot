@@ -5,13 +5,13 @@ export default function HomePage() {
   return (
     <>
       <Head>
-        <title>WriteFlow Next.js Demo</title>
-        <meta name="description" content="WriteFlow Editor with Next.js Pages Router" />
+        <title>Inkpilot Next.js Demo</title>
+        <meta name="description" content="Inkpilot Editor with Next.js Pages Router" />
       </Head>
       <div className="wf-page">
         <header className="wf-header">
           <div>
-            <h1 className="wf-title">WriteFlow Next.js (Pages Router)</h1>
+            <h1 className="wf-title">Inkpilot Next.js (Pages Router)</h1>
             <p className="wf-subtitle">AI-powered editor infrastructure — Pages Router demo</p>
           </div>
         </header>

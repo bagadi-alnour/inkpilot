@@ -1,15 +1,15 @@
 import { useState, useCallback } from 'react';
 import type { Editor } from '@tiptap/core';
-import type { SEOConfig, SEOAnalysis, SEOSignal, AIConfig } from '@writeflow/types';
-import { analyzeContent } from '@writeflow/seo';
-import { createAIProvider } from '@writeflow/ai';
+import type { SEOConfig, SEOAnalysis, SEOSignal, AIConfig } from '@inkpilot/types';
+import { analyzeContent } from '@inkpilot/seo';
+import { createAIProvider } from '@inkpilot/ai';
 
 export interface UseSEOAnalysisReturn {
   signals: SEOSignal[];
   analysis: SEOAnalysis | null;
   isAnalyzing: boolean;
   score: number | null;
-  runAnalysis: () => Promise<void>;
+  runAnalysis: () => Promise<SEOAnalysis | null>;
 }
 
 export function useSEOAnalysis(
@@ -22,15 +22,17 @@ export function useSEOAnalysis(
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const runAnalysis = useCallback(async () => {
-    if (!editor || !seoConfig) return;
+    if (!editor) return null;
 
     setIsAnalyzing(true);
     try {
       const provider = aiConfig ? createAIProvider(aiConfig) : undefined;
-      const result = await analyzeContent(editor, seoConfig, provider);
+      const result = await analyzeContent(editor, seoConfig ?? {}, provider);
       setAnalysis(result);
+      return result;
     } catch (error) {
       console.error('SEO analysis failed:', error);
+      return null;
     } finally {
       setIsAnalyzing(false);
     }

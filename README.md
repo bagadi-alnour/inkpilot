@@ -1,4 +1,4 @@
-# WriteFlow
+# Inkpilot
 
 AI-powered writing infrastructure for developers. Drop a rich text editor with inline AI rewriting, progressive SEO signals, image optimization, and BYO storage into any React app.
 
@@ -207,7 +207,7 @@ Then proxy requests through your backend.
 
 ## SEO Signals
 
-WriteFlow provides two levels of SEO assistance:
+Inkpilot provides two levels of SEO assistance:
 
 ### Light Signals (During Writing)
 
@@ -360,7 +360,7 @@ When storage is configured, processed images upload automatically and the editor
 
 ## Theming
 
-WriteFlow uses CSS variables for all visual styling. Three built-in presets, dark/light mode support, and full customization.
+Inkpilot uses CSS variables for all visual styling. Three built-in presets, dark/light mode support, and full customization.
 
 ### Mode
 
@@ -405,7 +405,7 @@ WriteFlow uses CSS variables for all visual styling. Three built-in presets, dar
 All styling uses `--wf-*` CSS variables. Override them in your own CSS:
 
 ```css
-.writeflow-editor {
+.inkpilot-editor {
   --wf-color-primary: #6366f1;
   --wf-color-bg: #ffffff;
   --wf-color-fg: #1e293b;
@@ -455,13 +455,13 @@ See the full list of translation keys in the [`TranslationStrings`](#translation
 
 For developers who need granular control beyond the `<Editor />` component.
 
-### useWriteFlowEditor
+### useInkpilotEditor
 
 ```tsx
-import { useWriteFlowEditor } from "@inkpilot/editor";
+import { useInkpilotEditor } from "@inkpilot/editor";
 
 function CustomEditor() {
-  const { editor, content, signals, setContent, isEmpty } = useWriteFlowEditor({
+  const { editor, content, signals, setContent, isEmpty } = useInkpilotEditor({
     ai: { provider: "openai", apiKey: "..." },
     seo: { lightSignals: true },
     placeholder: "Start writing...",
@@ -634,7 +634,7 @@ export async function POST(req: Request) {
 
 ## TypeScript
 
-WriteFlow is written in TypeScript with `strict: true`. All types are exported:
+Inkpilot is written in TypeScript with `strict: true`. All types are exported:
 
 ```tsx
 import type {

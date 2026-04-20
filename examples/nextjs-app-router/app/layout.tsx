@@ -3,8 +3,8 @@ import '@inkpilot/editor/styles.css';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'WriteFlow Next.js Demo',
-  description: 'WriteFlow Editor with Next.js App Router',
+  title: 'Inkpilot Next.js Demo',
+  description: 'Inkpilot Editor with Next.js App Router',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

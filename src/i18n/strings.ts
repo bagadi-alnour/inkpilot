@@ -1,4 +1,4 @@
-import type { TranslationStrings } from '@writeflow/types';
+import type { TranslationStrings } from '@inkpilot/types';
 
 export const defaultStrings: TranslationStrings = {
   // Toolbar

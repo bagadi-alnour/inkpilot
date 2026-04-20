@@ -1,4 +1,4 @@
-import type { SEOIssue } from '@writeflow/types';
+import type { SEOIssue } from '@inkpilot/types';
 
 const MIN_TITLE_LENGTH = 30;
 const MAX_TITLE_LENGTH = 60;

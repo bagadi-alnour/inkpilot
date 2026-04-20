@@ -1,5 +1,5 @@
-import type { PresignedUrlRequest, PresignedUrlResponse, UploadedFile } from '@writeflow/types';
-import { WriteFlowError } from '@writeflow/utils';
+import type { PresignedUrlRequest, PresignedUrlResponse, UploadedFile } from '@inkpilot/types';
+import { InkpilotError } from '@inkpilot/utils';
 
 export async function fetchPresignedUrl(
   endpoint: string,
@@ -12,7 +12,7 @@ export async function fetchPresignedUrl(
   });
 
   if (!response.ok) {
-    throw new WriteFlowError(
+    throw new InkpilotError(
       `Failed to get presigned URL: ${response.status} ${response.statusText}`,
       'PRESIGNED_URL_FAILED',
     );
@@ -32,7 +32,7 @@ export async function uploadViaPresignedUrl(
   });
 
   if (!response.ok) {
-    throw new WriteFlowError(
+    throw new InkpilotError(
       `Upload failed: ${response.status} ${response.statusText}`,
       'UPLOAD_FAILED',
     );

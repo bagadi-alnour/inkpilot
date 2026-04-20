@@ -1,4 +1,4 @@
-import type { ReadabilityResult, SEOIssue } from '@writeflow/types';
+import type { ReadabilityResult, SEOIssue } from '@inkpilot/types';
 
 function splitSentences(text: string): string[] {
   return text

@@ -9,12 +9,12 @@ export function debounce<T extends (...args: Parameters<T>) => void>(
   };
 }
 
-export class WriteFlowError extends Error {
+export class InkpilotError extends Error {
   constructor(
     message: string,
     public code?: string,
   ) {
     super(message);
-    this.name = 'WriteFlowError';
+    this.name = 'InkpilotError';
   }
 }

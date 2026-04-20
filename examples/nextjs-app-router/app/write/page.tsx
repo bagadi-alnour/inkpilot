@@ -78,7 +78,7 @@ export default function WritePage() {
       >
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: theme === 'dark' ? '#f1f5f9' : '#0f172a' }}>
-            WriteFlow Demo
+            Inkpilot Demo
           </h1>
           <p style={{ fontSize: 14, color: subtle, marginTop: 4 }}>
             <Link href="/" style={{ color: '#2563eb' }}>
@@ -221,7 +221,7 @@ export default function WritePage() {
           seo={{
             lightSignals: true,
             prePublishPanel: true,
-            targetKeywords: ['writeflow', 'editor', 'nextjs'],
+            targetKeywords: ['inkpilot', 'editor', 'nextjs'],
           }}
           storage={{
             provider: 's3',

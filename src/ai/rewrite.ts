@@ -1,5 +1,5 @@
 import type { Editor } from '@tiptap/core';
-import type { AIConfig, AIProviderAdapter, AITone, AIIntent, RewriteResult, DiffSegment } from '@writeflow/types';
+import type { AIConfig, AIProviderAdapter, AITone, AIIntent, RewriteResult, DiffSegment } from '@inkpilot/types';
 import { getSurroundingContext, getSelectedText } from './context';
 import { computeDiff } from './diff';
 import { createStreamController } from './stream';
@@ -21,7 +21,6 @@ export interface RewriteSession {
 export async function executeRewrite(
   editor: Editor,
   aiProvider: AIProviderAdapter,
-  config: AIConfig,
   session: RewriteSession,
 ): Promise<void> {
   const { from, to, tone, intent, preserveMeaning, controller } = session;
@@ -55,7 +54,6 @@ export async function executeRewrite(
         accepted: false,
       };
       session.onComplete(result);
-      config.onRewrite?.(result);
     }
   } catch (error) {
     if (!controller.isAborted()) {

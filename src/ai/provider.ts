@@ -1,5 +1,5 @@
-import type { AIConfig, AIProviderAdapter } from '@writeflow/types';
-import { WriteFlowError } from '@writeflow/utils';
+import type { AIConfig, AIProviderAdapter } from '@inkpilot/types';
+import { InkpilotError } from '@inkpilot/utils';
 import { createOpenAIAdapter } from './providers/openai';
 import { createAnthropicAdapter } from './providers/anthropic';
 
@@ -10,7 +10,7 @@ export function createAIProvider(config: AIConfig): AIProviderAdapter {
     case 'anthropic':
       return createAnthropicAdapter(config);
     default:
-      throw new WriteFlowError(
+      throw new InkpilotError(
         `Unknown AI provider: ${config.provider as string}`,
         'UNKNOWN_AI_PROVIDER',
       );

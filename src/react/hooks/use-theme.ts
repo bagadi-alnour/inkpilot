@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import type { ThemeConfig, ThemePreset, ResolvedTheme } from '@writeflow/types';
-import { applyTheme, resolveTheme } from '@writeflow/theme';
+import type { ThemeConfig, ThemePreset, ResolvedTheme } from '@inkpilot/types';
+import { applyTheme, resolveTheme } from '@inkpilot/theme';
 
 export interface UseThemeReturn {
   theme: ResolvedTheme;

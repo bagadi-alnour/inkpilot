@@ -1,5 +1,5 @@
-import type { ImageConfig, ImageProcessingResult, StorageAdapter } from '@writeflow/types';
-import { DEFAULT_IMAGE_CONFIG } from '@writeflow/types';
+import type { ImageConfig, ImageProcessingResult, StorageAdapter } from '@inkpilot/types';
+import { DEFAULT_IMAGE_CONFIG } from '@inkpilot/types';
 import { compressImage } from './compress';
 import { validateImage } from './format';
 import { generateResponsiveSizes } from './resize';
@@ -75,4 +75,27 @@ export async function processImage(
   const srcset = srcsetParts.join(', ');
 
   return { original, compressed, responsive, srcset };
+}
+
+export async function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ''));
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read blob'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+export function revokeImageProcessingResult(result?: ImageProcessingResult | null): void {
+  if (typeof URL === 'undefined' || !result) return;
+
+  const urls = [
+    result.original.url,
+    result.compressed?.url,
+    ...result.responsive.map((image) => image.url),
+  ].filter((url): url is string => typeof url === 'string' && url.startsWith('blob:'));
+
+  for (const url of urls) {
+    URL.revokeObjectURL(url);
+  }
 }

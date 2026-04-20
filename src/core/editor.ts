@@ -1,6 +1,6 @@
 import { Editor } from '@tiptap/core';
-import type { EditorConfig } from '@writeflow/types';
-import { createWriteFlowKit } from './extensions/writeflow-kit';
+import type { EditorConfig } from '@inkpilot/types';
+import { createInkpilotKit } from './extensions/inkpilot-kit';
 import { AIRewriteExtension } from './extensions/ai-rewrite';
 import { SEOSignalsExtension } from './extensions/seo-signals';
 import { ImageUploadExtension } from './extensions/image-upload';
@@ -12,7 +12,7 @@ export interface CreateEditorOptions extends EditorConfig {
   readOnly?: boolean;
   onRewrite?: () => void;
   onPublish?: () => void;
-  onSignalsUpdate?: (signals: import('@writeflow/types').SEOSignal[]) => void;
+  onSignalsUpdate?: (signals: import('@inkpilot/types').SEOSignal[]) => void;
 }
 
 export function createEditor(options: CreateEditorOptions): Editor {
@@ -32,7 +32,7 @@ export function createEditor(options: CreateEditorOptions): Editor {
 
   return new Editor({
     extensions: [
-      ...createWriteFlowKit({ placeholder }),
+      ...createInkpilotKit({ placeholder }),
       AIRewriteExtension.configure({
         enabled: !!ai,
       }),

@@ -1,5 +1,5 @@
-import type { SERPPreviewData } from '@writeflow/types';
-import { useTranslation } from '@writeflow/i18n';
+import type { SERPPreviewData } from '@inkpilot/types';
+import { useTranslation } from '@inkpilot/i18n';
 
 interface SERPPreviewProps {
   data: SERPPreviewData;

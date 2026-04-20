@@ -1,4 +1,4 @@
-import type { KeywordResult, SEOIssue } from '@writeflow/types';
+import type { KeywordResult, SEOIssue } from '@inkpilot/types';
 
 export function analyzeKeyword(
   text: string,

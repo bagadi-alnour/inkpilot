@@ -1,9 +1,9 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Editor } from '@tiptap/core';
-import type { AIConfig, AITone, AIIntent, RewriteResult, DiffSegment } from '@writeflow/types';
-import { createAIProvider } from '@writeflow/ai';
-import { createRewriteSession, executeRewrite } from '@writeflow/ai';
-import type { RewriteSession } from '@writeflow/ai';
+import type { AIConfig, AITone, AIIntent, RewriteResult, DiffSegment } from '@inkpilot/types';
+import { createAIProvider } from '@inkpilot/ai';
+import { createRewriteSession, executeRewrite } from '@inkpilot/ai';
+import type { RewriteSession } from '@inkpilot/ai';
 
 export interface UseAIRewriteReturn {
   rewrite: (options?: { tone?: AITone; intent?: AIIntent; preserveMeaning?: boolean }) => void;
@@ -37,6 +37,12 @@ export function useAIRewrite(
   const [streamedText, setStreamedText] = useState('');
   const sessionRef = useRef<RewriteSession | null>(null);
   const liveRef = useRef<LiveState | null>(null);
+
+  useEffect(() => {
+    return () => {
+      sessionRef.current?.controller.abort();
+    };
+  }, []);
 
   const restoreOriginal = useCallback(() => {
     if (!editor || !liveRef.current) return;
@@ -92,8 +98,14 @@ export function useAIRewrite(
           },
           onError(error) {
             console.error('Rewrite failed:', error);
+            sessionRef.current = null;
             setIsRewriting(false);
+            setIsLive(false);
             restoreOriginal();
+            liveRef.current = null;
+            setResult(null);
+            setDiff([]);
+            setStreamedText('');
           },
         },
         config,
@@ -108,7 +120,7 @@ export function useAIRewrite(
       setDiff([]);
       setStreamedText('');
 
-      void executeRewrite(editor, provider, config, session);
+      void executeRewrite(editor, provider, session);
     },
     [editor, config, restoreOriginal],
   );
@@ -148,7 +160,11 @@ export function useAIRewrite(
           },
           onError(error) {
             console.error('Rewrite failed:', error);
+            sessionRef.current = null;
             setIsRewriting(false);
+            setResult(null);
+            setDiff([]);
+            setStreamedText('');
           },
         },
         config,
@@ -163,7 +179,7 @@ export function useAIRewrite(
       setDiff([]);
       setStreamedText('');
 
-      void executeRewrite(editor, provider, config, session);
+      void executeRewrite(editor, provider, session);
     },
     [editor, config],
   );
@@ -171,9 +187,13 @@ export function useAIRewrite(
   const accept = useCallback(() => {
     if (!editor || !sessionRef.current || !result) return;
 
+    const acceptedResult = { ...result, accepted: true };
+
     if (isLive) {
       liveRef.current = null;
       sessionRef.current = null;
+      config?.onRewrite?.(acceptedResult);
+      setIsRewriting(false);
       setIsLive(false);
       setResult(null);
       setDiff([]);
@@ -187,24 +207,31 @@ export function useAIRewrite(
       .insertContentAt(from, result.rewritten)
       .run();
 
-    setResult({ ...result, accepted: true });
+    config?.onRewrite?.(acceptedResult);
     sessionRef.current = null;
+    setIsRewriting(false);
+    setResult(null);
     setDiff([]);
     setStreamedText('');
-  }, [editor, result, isLive]);
+  }, [config, editor, result, isLive]);
 
   const reject = useCallback(() => {
+    if (result) {
+      config?.onRewrite?.({ ...result, accepted: false });
+    }
     if (isLive) {
       revert();
       return;
     }
     sessionRef.current?.controller.abort();
     sessionRef.current = null;
+    liveRef.current = null;
     setIsRewriting(false);
+    setIsLive(false);
     setResult(null);
     setDiff([]);
     setStreamedText('');
-  }, [isLive, revert]);
+  }, [config, isLive, result, revert]);
 
   const abort = useCallback(() => {
     sessionRef.current?.controller.abort();

@@ -1,4 +1,4 @@
-import type { EditorEventMap, EditorEventName, EditorEventHandler, EditorEvents } from '@writeflow/types';
+import type { EditorEventMap, EditorEventName, EditorEventHandler, EditorEvents } from '@inkpilot/types';
 
 export function createEventEmitter(): EditorEvents {
   const listeners: Partial<Record<EditorEventName, Set<(payload: unknown) => void>>> = {};

@@ -1,4 +1,4 @@
-import type { SEOIssue } from '@writeflow/types';
+import type { SEOIssue } from '@inkpilot/types';
 
 const MIN_META_LENGTH = 120;
 const MAX_META_LENGTH = 160;

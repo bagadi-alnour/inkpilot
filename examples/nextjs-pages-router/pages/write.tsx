@@ -12,8 +12,8 @@ export default function WritePage() {
   return (
     <>
       <Head>
-        <title>Write — WriteFlow (Pages Router)</title>
-        <meta name="description" content="WriteFlow editor demo with Pages Router" />
+        <title>Write — Inkpilot (Pages Router)</title>
+        <meta name="description" content="Inkpilot editor demo with Pages Router" />
       </Head>
       <WriteEditorDemo />
     </>

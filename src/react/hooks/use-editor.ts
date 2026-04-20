@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useEditor as useTiptapEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
-import type { EditorConfig, EditorContent, SEOSignal } from '@writeflow/types';
-import { createWriteFlowKit } from '@writeflow/core';
-import { AIRewriteExtension } from '@writeflow/core';
-import { SEOSignalsExtension } from '@writeflow/core';
-import { ImageUploadExtension } from '@writeflow/core';
-import { KeyboardShortcutsExtension } from '@writeflow/core';
-import { getContent } from '@writeflow/core';
-import { debounce } from '@writeflow/utils';
+import type { EditorConfig, EditorContent, SEOSignal } from '@inkpilot/types';
+import { createInkpilotKit } from '@inkpilot/core';
+import { AIRewriteExtension } from '@inkpilot/core';
+import { SEOSignalsExtension } from '@inkpilot/core';
+import { ImageUploadExtension } from '@inkpilot/core';
+import { KeyboardShortcutsExtension } from '@inkpilot/core';
+import { getContent } from '@inkpilot/core';
+import { debounce } from '@inkpilot/utils';
 
 export interface UseEditorOptions extends EditorConfig {
   placeholder?: string;
@@ -26,7 +26,7 @@ export interface UseEditorReturn {
   isEmpty: boolean;
 }
 
-export function useWriteFlowEditor(options: UseEditorOptions): UseEditorReturn {
+export function useInkpilotEditor(options: UseEditorOptions): UseEditorReturn {
   const [content, setContentState] = useState<EditorContent | null>(null);
   const [signals, setSignals] = useState<SEOSignal[]>([]);
   const onChangeRef = useRef(options.onChange);
@@ -42,7 +42,7 @@ export function useWriteFlowEditor(options: UseEditorOptions): UseEditorReturn {
 
   const editor = useTiptapEditor({
     extensions: [
-      ...createWriteFlowKit({ placeholder: options.placeholder }),
+      ...createInkpilotKit({ placeholder: options.placeholder }),
       AIRewriteExtension.configure({ enabled: !!options.ai }),
       SEOSignalsExtension.configure({
         enabled: options.seo?.lightSignals !== false,

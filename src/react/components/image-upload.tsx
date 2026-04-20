@@ -1,5 +1,5 @@
 import { useRef, useCallback } from 'react';
-import { useTranslation } from '@writeflow/i18n';
+import { useTranslation } from '@inkpilot/i18n';
 
 interface ImageUploadProps {
   onUpload: (file: File) => void;

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
-import { computeSignals } from '@writeflow/core';
-import { analyzeContent } from '@writeflow/seo';
+import { computeSignals } from '@inkpilot/core';
+import { analyzeContent } from '@inkpilot/seo';
 
 /** Light SEO signals are produced by `computeSignals` (document-level heading/alt checks). */
 describe('SEO light signals (computeSignals)', () => {

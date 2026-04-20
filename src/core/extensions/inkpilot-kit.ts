@@ -13,11 +13,11 @@ import type { Extensions } from '@tiptap/core';
 
 const lowlight = createLowlight(common);
 
-export interface WriteFlowKitOptions {
+export interface InkpilotKitOptions {
   placeholder?: string;
 }
 
-export function createWriteFlowKit(options: WriteFlowKitOptions = {}): Extensions {
+export function createInkpilotKit(options: InkpilotKitOptions = {}): Extensions {
   return [
     StarterKit.configure({
       codeBlock: false,

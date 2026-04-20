@@ -1,4 +1,4 @@
-import type { SEOIssue, ReadabilityResult, KeywordResult } from '@writeflow/types';
+import type { SEOIssue, ReadabilityResult, KeywordResult } from '@inkpilot/types';
 
 export function computeSEOScore(
   structuralIssues: SEOIssue[],

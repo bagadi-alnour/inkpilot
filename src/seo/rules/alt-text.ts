@@ -1,4 +1,4 @@
-import type { SEOIssue } from '@writeflow/types';
+import type { SEOIssue } from '@inkpilot/types';
 
 export interface ImageInfo {
   alt: string;

@@ -55,8 +55,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "git+https://github.com/bagadi-alnour/inkpilot.git"
   },
+  "bugs": {
+    "url": "https://github.com/bagadi-alnour/inkpilot/issues"
+  },
+  "homepage": "https://github.com/bagadi-alnour/inkpilot#readme",
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0"

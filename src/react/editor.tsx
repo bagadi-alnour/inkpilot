@@ -1,12 +1,13 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { EditorContent } from '@tiptap/react';
-import type { EditorConfig } from '@writeflow/types';
-import { I18nContext, createI18nValue } from '@writeflow/i18n';
-import { generateSERPPreview } from '@writeflow/seo';
-import { processImage } from '@writeflow/image';
+import type { EditorConfig, SEOAnalysis } from '@inkpilot/types';
+import { I18nContext, createI18nValue } from '@inkpilot/i18n';
+import { generateSERPPreview } from '@inkpilot/seo';
+import { blobToDataUrl, processImage, revokeImageProcessingResult } from '@inkpilot/image';
+import { getContent } from '@inkpilot/core';
 import { useStorage } from './hooks/use-storage';
-import { WriteFlowContext } from './context';
-import { useWriteFlowEditor } from './hooks/use-editor';
+import { InkpilotContext } from './context';
+import { useInkpilotEditor } from './hooks/use-editor';
 import { useAIRewrite } from './hooks/use-ai-rewrite';
 import { useSEOAnalysis } from './hooks/use-seo-analysis';
 import { useTheme } from './hooks/use-theme';
@@ -24,6 +25,12 @@ export interface EditorProps extends EditorConfig {
   autoFocus?: boolean;
   placeholder?: string;
 }
+
+const EMPTY_ANALYSIS: SEOAnalysis = {
+  score: 0,
+  issues: [],
+  suggestions: [],
+};
 
 export function Editor(props: EditorProps) {
   const {
@@ -44,9 +51,10 @@ export function Editor(props: EditorProps) {
   } = props;
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const publishRef = useRef<() => void>(() => undefined);
   const [showSEOPanel, setShowSEOPanel] = useState(false);
 
-  const { editor, content: currentContent, signals } = useWriteFlowEditor({
+  const { editor, content: currentContent, signals } = useInkpilotEditor({
     ai,
     storage,
     seo,
@@ -57,23 +65,23 @@ export function Editor(props: EditorProps) {
     autoFocus,
     readOnly,
     onRewrite: undefined,
-    onPublish: () => {
-      if (seo?.prePublishPanel !== false) {
-        setShowSEOPanel(true);
-      }
-    },
+    onPublish: () => publishRef.current(),
   });
 
   const aiRewrite = useAIRewrite(editor, ai);
-  const seoAnalysis = useSEOAnalysis(editor, seo, ai, signals);
+  const {
+    analysis,
+    isAnalyzing,
+    runAnalysis,
+  } = useSEOAnalysis(editor, seo, ai, signals);
   const { theme: resolvedTheme } = useTheme(theme, containerRef);
   const { upload: storageUpload } = useStorage(storage);
 
   useEffect(() => {
     if (showSEOPanel) {
-      void seoAnalysis.runAnalysis();
+      void runAnalysis();
     }
-  }, [showSEOPanel, seoAnalysis]);
+  }, [runAnalysis, showSEOPanel]);
 
   const i18nValue = useMemo(
     () => createI18nValue(locale ?? i18nConfig?.locale ?? 'en', i18nConfig?.translations),
@@ -81,11 +89,31 @@ export function Editor(props: EditorProps) {
   );
 
   const handlePublish = useCallback(() => {
-    if (!editor || !currentContent) return;
-    const analysis = seoAnalysis.analysis ?? { score: 0, issues: [], suggestions: [] };
-    onPublish?.(currentContent, analysis);
+    if (!editor) return;
+    const contentToPublish = currentContent ?? getContent(editor);
+    const finalAnalysis = analysis ?? EMPTY_ANALYSIS;
+    onPublish?.(contentToPublish, finalAnalysis);
     setShowSEOPanel(false);
-  }, [editor, currentContent, seoAnalysis.analysis, onPublish]);
+  }, [analysis, currentContent, editor, onPublish]);
+
+  const startPublish = useCallback(async () => {
+    if (!editor) return;
+
+    if (!seo || seo.prePublishPanel === false) {
+      const contentToPublish = currentContent ?? getContent(editor);
+      const finalAnalysis = seo
+        ? (await runAnalysis()) ?? EMPTY_ANALYSIS
+        : EMPTY_ANALYSIS;
+      onPublish?.(contentToPublish, finalAnalysis);
+      return;
+    }
+
+    setShowSEOPanel(true);
+  }, [currentContent, editor, onPublish, runAnalysis, seo]);
+
+  publishRef.current = () => {
+    void startPublish();
+  };
 
   const serpPreview = useMemo(() => {
     if (!currentContent || !editor) return undefined;
@@ -107,10 +135,12 @@ export function Editor(props: EditorProps) {
     async (file: File) => {
       if (!editor) return;
       const alt = file.name.replace(/\.[^.]+$/, '');
+      let imageResult: Awaited<ReturnType<typeof processImage>> | null = null;
 
       try {
-        const result = await processImage(file, { config: props.image });
-        const processed = result.compressed ?? result.original;
+        imageResult = await processImage(file, { config: props.image });
+        const processed = imageResult.compressed ?? imageResult.original;
+        let src: string;
 
         if (storage) {
           const blob = processed.blob;
@@ -118,13 +148,18 @@ export function Editor(props: EditorProps) {
             ? blob
             : new File([blob], file.name, { type: blob.type || file.type });
           const uploaded = await storageUpload(uploadFile, file.name);
-          const url = uploaded?.url ?? processed.url;
-          editor.chain().focus().setImage({ src: url, alt }).run();
+          src = uploaded?.url ?? processed.url;
         } else {
-          editor.chain().focus().setImage({ src: processed.url, alt }).run();
+          src = await blobToDataUrl(processed.blob);
         }
+
+        editor.chain().focus().setImage({ src, alt }).run();
+        revokeImageProcessingResult(imageResult);
       } catch {
-        const fallbackUrl = URL.createObjectURL(file);
+        if (imageResult) {
+          revokeImageProcessingResult(imageResult);
+        }
+        const fallbackUrl = await blobToDataUrl(file);
         editor.chain().focus().setImage({ src: fallbackUrl, alt }).run();
       }
     },
@@ -145,10 +180,10 @@ export function Editor(props: EditorProps) {
 
   return (
     <I18nContext.Provider value={i18nValue}>
-      <WriteFlowContext.Provider value={ctxValue}>
+      <InkpilotContext.Provider value={ctxValue}>
         <div
           ref={containerRef}
-          className={`writeflow-editor${className ? ` ${className}` : ''}`}
+          className={`inkpilot-editor${className ? ` ${className}` : ''}`}
           style={style}
           data-wf-theme={resolvedTheme.mode}
         >
@@ -182,17 +217,17 @@ export function Editor(props: EditorProps) {
             )}
           </div>
 
-          {showSEOPanel && seoAnalysis.analysis && (
+          {showSEOPanel && (
             <SEOPanel
-              analysis={seoAnalysis.analysis}
+              analysis={analysis ?? EMPTY_ANALYSIS}
               serpPreview={serpPreview}
-              isAnalyzing={seoAnalysis.isAnalyzing}
+              isAnalyzing={isAnalyzing}
               onClose={() => setShowSEOPanel(false)}
               onPublish={handlePublish}
             />
           )}
         </div>
-      </WriteFlowContext.Provider>
+      </InkpilotContext.Provider>
     </I18nContext.Provider>
   );
 }

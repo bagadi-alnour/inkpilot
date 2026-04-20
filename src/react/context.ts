@@ -1,8 +1,8 @@
 import { createContext, useContext } from 'react';
 import type { Editor } from '@tiptap/core';
-import type { AIConfig, StorageConfig, SEOConfig, ThemeConfig, SEOSignal } from '@writeflow/types';
+import type { AIConfig, StorageConfig, SEOConfig, ThemeConfig, SEOSignal } from '@inkpilot/types';
 
-export interface WriteFlowContextValue {
+export interface InkpilotContextValue {
   editor: Editor | null;
   aiConfig?: AIConfig;
   storageConfig?: StorageConfig;
@@ -11,11 +11,11 @@ export interface WriteFlowContextValue {
   signals: SEOSignal[];
 }
 
-export const WriteFlowContext = createContext<WriteFlowContextValue>({
+export const InkpilotContext = createContext<InkpilotContextValue>({
   editor: null,
   signals: [],
 });
 
-export function useWriteFlowContext(): WriteFlowContextValue {
-  return useContext(WriteFlowContext);
+export function useInkpilotContext(): InkpilotContextValue {
+  return useContext(InkpilotContext);
 }

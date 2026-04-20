@@ -59,7 +59,7 @@ export function App() {
         }}
       >
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700 }}>WriteFlow Demo</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 700 }}>Inkpilot Demo</h1>
           <p style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
             AI-powered editor infrastructure
           </p>
@@ -168,7 +168,7 @@ export function App() {
           seo={{
             lightSignals: true,
             prePublishPanel: true,
-            targetKeywords: ['writeflow', 'editor'],
+            targetKeywords: ['inkpilot', 'editor'],
           }}
           onChange={handleChange}
           onPublish={handlePublish}

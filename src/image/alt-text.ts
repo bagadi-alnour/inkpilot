@@ -1,4 +1,4 @@
-import type { AIProviderAdapter } from '@writeflow/types';
+import type { AIProviderAdapter } from '@inkpilot/types';
 
 export async function suggestAltText(
   imageUrl: string,

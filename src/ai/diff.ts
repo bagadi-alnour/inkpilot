@@ -1,5 +1,5 @@
 import DiffMatchPatch from 'diff-match-patch';
-import type { DiffSegment } from '@writeflow/types';
+import type { DiffSegment } from '@inkpilot/types';
 
 const dmp = new DiffMatchPatch();
 

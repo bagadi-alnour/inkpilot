@@ -1,5 +1,5 @@
-import type { AITone, AIIntent } from '@writeflow/types';
-import { useTranslation } from '@writeflow/i18n';
+import type { AITone, AIIntent } from '@inkpilot/types';
+import { useTranslation } from '@inkpilot/i18n';
 
 interface AIOptionsProps {
   tone: AITone;

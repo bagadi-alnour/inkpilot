@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import type { DiffSegment, RewriteResult } from '@writeflow/types';
-import { useTranslation } from '@writeflow/i18n';
+import type { DiffSegment, RewriteResult } from '@inkpilot/types';
+import { useTranslation } from '@inkpilot/i18n';
 import { DiffView } from './diff-view';
 
 interface AIRewritePanelProps {

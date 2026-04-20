@@ -1,4 +1,4 @@
-import type { ThemeConfig, ThemeColors, ResolvedTheme } from '@writeflow/types';
+import type { ThemeConfig, ThemeColors, ResolvedTheme } from '@inkpilot/types';
 import { CSS_VARS } from './variables';
 import { getPresetColors } from './presets';
 import { detectColorScheme } from './auto-detect';

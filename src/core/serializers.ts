@@ -20,6 +20,14 @@ export function htmlToMarkdown(html: string): string {
 
 export function htmlToText(html: string): string {
   if (!html) return '';
+  if (typeof document === 'undefined') {
+    return html
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
   const div = document.createElement('div');
   div.innerHTML = html;
   return div.textContent ?? '';

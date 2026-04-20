@@ -1,1 +1,1 @@
-export { computeSignals } from '@writeflow/core';
+export { computeSignals } from '@inkpilot/core';

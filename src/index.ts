@@ -3,7 +3,7 @@ export { Editor } from './react/editor';
 export type { EditorProps } from './react/editor';
 
 // Hooks API
-export { useWriteFlowEditor } from './react/hooks/use-editor';
+export { useInkpilotEditor } from './react/hooks/use-editor';
 export { useAIRewrite } from './react/hooks/use-ai-rewrite';
 export { useSEOAnalysis } from './react/hooks/use-seo-analysis';
 export { useStorage } from './react/hooks/use-storage';

@@ -11,8 +11,8 @@ import type {
   StorageAdapter,
   UploadedFile,
   PresignedUrlOptions,
-} from '@writeflow/types';
-import { WriteFlowError } from '@writeflow/utils';
+} from '@inkpilot/types';
+import { InkpilotError } from '@inkpilot/utils';
 import { generateStoragePath } from '../utils';
 import { fetchPresignedUrl, uploadViaPresignedUrl } from '../presigned';
 
@@ -51,7 +51,7 @@ export class S3StorageAdapter implements StorageAdapter {
     }
 
     if (!this.client) {
-      throw new WriteFlowError(
+      throw new InkpilotError(
         'Storage not configured: provide presignedUrlEndpoint or direct credentials',
         'STORAGE_NOT_CONFIGURED',
       );
@@ -84,7 +84,7 @@ export class S3StorageAdapter implements StorageAdapter {
 
   async get(key: string): Promise<string> {
     if (!this.client) {
-      throw new WriteFlowError('Direct credentials required for get()', 'CREDENTIALS_REQUIRED');
+      throw new InkpilotError('Direct credentials required for get()', 'CREDENTIALS_REQUIRED');
     }
 
     const response = await this.client.send(
@@ -106,7 +106,7 @@ export class S3StorageAdapter implements StorageAdapter {
 
   async delete(key: string): Promise<void> {
     if (!this.client) {
-      throw new WriteFlowError('Direct credentials required for delete()', 'CREDENTIALS_REQUIRED');
+      throw new InkpilotError('Direct credentials required for delete()', 'CREDENTIALS_REQUIRED');
     }
 
     await this.client.send(
@@ -116,7 +116,7 @@ export class S3StorageAdapter implements StorageAdapter {
 
   async list(prefix?: string): Promise<UploadedFile[]> {
     if (!this.client) {
-      throw new WriteFlowError('Direct credentials required for list()', 'CREDENTIALS_REQUIRED');
+      throw new InkpilotError('Direct credentials required for list()', 'CREDENTIALS_REQUIRED');
     }
 
     const response = await this.client.send(
@@ -136,7 +136,7 @@ export class S3StorageAdapter implements StorageAdapter {
 
   async getPresignedUrl(key: string, options?: PresignedUrlOptions): Promise<string> {
     if (!this.client) {
-      throw new WriteFlowError(
+      throw new InkpilotError(
         'Direct credentials required for getPresignedUrl()',
         'CREDENTIALS_REQUIRED',
       );

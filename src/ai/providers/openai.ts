@@ -1,6 +1,6 @@
 import { streamText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
-import type { AIConfig, AIProviderAdapter, RewriteParams, RestructureParams } from '@writeflow/types';
+import type { AIConfig, AIProviderAdapter, RewriteParams, RestructureParams } from '@inkpilot/types';
 import { buildRewritePrompt, buildRestructurePrompt, buildTitleSuggestionPrompt, buildMetaSuggestionPrompt } from '../prompts';
 
 export function createOpenAIAdapter(config: AIConfig): AIProviderAdapter {

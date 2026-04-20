@@ -5,7 +5,7 @@ export default function HomePage() {
     <div className="wf-page">
       <header className="wf-header">
         <div>
-          <h1 className="wf-title">WriteFlow Next.js (App Router)</h1>
+          <h1 className="wf-title">Inkpilot Next.js (App Router)</h1>
           <p className="wf-subtitle">AI-powered editor infrastructure — App Router demo</p>
         </div>
       </header>

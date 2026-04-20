@@ -1,5 +1,5 @@
 import type { Editor } from '@tiptap/core';
-import type { HeadingNode } from '@writeflow/types';
+import type { HeadingNode } from '@inkpilot/types';
 
 export function getSurroundingContext(
   editor: Editor,

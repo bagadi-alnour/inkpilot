@@ -1,6 +1,6 @@
 import { useRef, useCallback } from 'react';
 import type { Editor } from '@tiptap/core';
-import { useTranslation } from '@writeflow/i18n';
+import { useTranslation } from '@inkpilot/i18n';
 
 interface ToolbarProps {
   editor: Editor | null;

@@ -1,8 +1,8 @@
 export { Editor } from './editor';
 export type { EditorProps } from './editor';
-export { WriteFlowContext, useWriteFlowContext } from './context';
-export type { WriteFlowContextValue } from './context';
-export { useWriteFlowEditor } from './hooks/use-editor';
+export { InkpilotContext, useInkpilotContext } from './context';
+export type { InkpilotContextValue } from './context';
+export { useInkpilotEditor } from './hooks/use-editor';
 export type { UseEditorReturn } from './hooks/use-editor';
 export { useAIRewrite } from './hooks/use-ai-rewrite';
 export type { UseAIRewriteReturn } from './hooks/use-ai-rewrite';

@@ -1,4 +1,4 @@
-import type { ThemeColors, ThemePreset } from '@writeflow/types';
+import type { ThemeColors, ThemePreset } from '@inkpilot/types';
 
 interface FullPreset {
   light: ThemeColors;

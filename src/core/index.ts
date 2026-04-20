@@ -4,7 +4,7 @@ export { getContent } from './document';
 export { htmlToMarkdown, htmlToText, countWords, estimateReadingTime } from './serializers';
 export { createEventEmitter } from './events';
 export {
-  createWriteFlowKit,
+  createInkpilotKit,
   AIRewriteExtension,
   aiRewritePluginKey,
   SEOSignalsExtension,

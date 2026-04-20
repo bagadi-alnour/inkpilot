@@ -1,4 +1,4 @@
-export { createWriteFlowKit } from './writeflow-kit';
+export { createInkpilotKit } from './inkpilot-kit';
 export { AIRewriteExtension, aiRewritePluginKey } from './ai-rewrite';
 export type { AIRewriteState } from './ai-rewrite';
 export { SEOSignalsExtension, computeSignals } from './seo-signals';

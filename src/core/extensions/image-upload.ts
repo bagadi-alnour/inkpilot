@@ -1,8 +1,8 @@
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
-import type { StorageConfig, ImageConfig } from '@writeflow/types';
-import { processImage } from '@writeflow/image';
-import { createStorageAdapter } from '@writeflow/storage';
+import type { StorageConfig, ImageConfig } from '@inkpilot/types';
+import { blobToDataUrl, processImage, revokeImageProcessingResult } from '@inkpilot/image';
+import { createStorageAdapter } from '@inkpilot/storage';
 
 export interface ImageUploadOptions {
   storage?: StorageConfig;
@@ -42,14 +42,15 @@ export const ImageUploadExtension = Extension.create<ImageUploadOptions>({
 
     async function handleFile(file: File) {
       opts.onUploadStart?.(file);
+      let imageResult: Awaited<ReturnType<typeof processImage>> | null = null;
 
       try {
-        const result = await processImage(file, {
+        imageResult = await processImage(file, {
           config: opts.image,
           storage: storageAdapter ?? undefined,
         });
 
-        const processed = result.compressed ?? result.original;
+        const processed = imageResult.compressed ?? imageResult.original;
         let url: string;
 
         if (storageAdapter) {
@@ -60,17 +61,21 @@ export const ImageUploadExtension = Extension.create<ImageUploadOptions>({
           const uploaded = await storageAdapter.put(uploadFile, file.name);
           url = uploaded.url;
         } else {
-          url = processed.url;
+          url = await blobToDataUrl(processed.blob);
         }
 
         const alt = file.name.replace(/\.[^.]+$/, '');
         editor.chain().focus().setImage({ src: url, alt }).run();
+        revokeImageProcessingResult(imageResult);
         opts.onUploadComplete?.(url);
       } catch (err) {
         const error = err instanceof Error ? err : new Error('Image processing failed');
         opts.onUploadError?.(error);
 
-        const fallbackUrl = URL.createObjectURL(file);
+        if (imageResult) {
+          revokeImageProcessingResult(imageResult);
+        }
+        const fallbackUrl = await blobToDataUrl(file);
         const alt = file.name.replace(/\.[^.]+$/, '');
         editor.chain().focus().setImage({ src: fallbackUrl, alt }).run();
       }

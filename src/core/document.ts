@@ -1,5 +1,5 @@
 import type { Editor } from '@tiptap/core';
-import type { EditorContent } from '@writeflow/types';
+import type { EditorContent } from '@inkpilot/types';
 import { htmlToMarkdown, htmlToText, countWords, estimateReadingTime } from './serializers';
 
 export function getContent(editor: Editor): EditorContent {

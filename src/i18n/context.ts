@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { TranslationStrings, TranslationKey } from '@writeflow/types';
+import type { TranslationStrings, TranslationKey } from '@inkpilot/types';
 import { defaultStrings } from './strings';
 
 export interface I18nContextValue {

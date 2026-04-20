@@ -49,4 +49,22 @@ describe('htmlToText', () => {
   it('returns empty string for empty input', () => {
     expect(htmlToText('')).toBe('');
   });
+
+  it('falls back to string sanitization when document is unavailable', () => {
+    const originalDocument = globalThis.document;
+
+    Object.defineProperty(globalThis, 'document', {
+      configurable: true,
+      value: undefined,
+    });
+
+    try {
+      expect(htmlToText('<p>Hello <strong>world</strong></p>')).toBe('Hello world');
+    } finally {
+      Object.defineProperty(globalThis, 'document', {
+        configurable: true,
+        value: originalDocument,
+      });
+    }
+  });
 });

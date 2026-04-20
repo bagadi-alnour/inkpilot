@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Editor } from '@tiptap/core';
-import { createAIProvider, createRewriteSession } from '@writeflow/ai';
+import { createAIProvider, createRewriteSession } from '@inkpilot/ai';
 
 describe('rewrite flow integration', () => {
   it('creates an AI provider from config', () => {

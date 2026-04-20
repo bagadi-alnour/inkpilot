@@ -1,4 +1,4 @@
-import type { ImageFormat, ImageValidation } from '@writeflow/types';
+import type { ImageFormat, ImageValidation } from '@inkpilot/types';
 
 export function detectFormat(file: File): ImageFormat | 'unknown' {
   const mimeMap: Record<string, ImageFormat> = {

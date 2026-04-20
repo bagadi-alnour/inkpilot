@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { SEOSignalIndicators } from '../../src/react/components/seo-signals';
 import { I18nContext, createI18nValue } from '../../src/i18n/context';
-import type { SEOSignal } from '@writeflow/types';
+import type { SEOSignal } from '@inkpilot/types';
 
 function renderWithI18n(ui: ReactElement) {
   return render(
