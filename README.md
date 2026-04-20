@@ -3,12 +3,12 @@
 AI-powered writing infrastructure for developers. Drop a rich text editor with inline AI rewriting, progressive SEO signals, image optimization, and BYO storage into any React app.
 
 ```bash
-npm install @writeflow/editor
+npm install @writeflowhq/writeflow
 ```
 
 ```tsx
-import { Editor } from "@writeflow/editor";
-import "@writeflow/editor/styles.css";
+import { Editor } from "@writeflowhq/writeflow";
+import "@writeflowhq/writeflow/styles.css";
 
 function App() {
   return (
@@ -45,11 +45,11 @@ function App() {
 ## Installation
 
 ```bash
-npm install @writeflow/editor
+npm install @writeflowhq/writeflow
 # or
-yarn add @writeflow/editor
+yarn add @writeflowhq/writeflow
 # or
-pnpm add @writeflow/editor
+pnpm add @writeflowhq/writeflow
 ```
 
 **Peer dependencies:** React 18+ or 19+.
@@ -65,8 +65,8 @@ npm install react react-dom
 Import the `<Editor />` component and the stylesheet:
 
 ```tsx
-import { Editor } from "@writeflow/editor";
-import "@writeflow/editor/styles.css";
+import { Editor } from "@writeflowhq/writeflow";
+import "@writeflowhq/writeflow/styles.css";
 
 function WritingPage() {
   return (
@@ -458,7 +458,7 @@ For developers who need granular control beyond the `<Editor />` component.
 ### useWriteFlowEditor
 
 ```tsx
-import { useWriteFlowEditor } from "@writeflow/editor";
+import { useWriteFlowEditor } from "@writeflowhq/writeflow";
 
 function CustomEditor() {
   const { editor, content, signals, setContent, isEmpty } = useWriteFlowEditor({
@@ -475,7 +475,7 @@ function CustomEditor() {
 ### useAIRewrite
 
 ```tsx
-import { useAIRewrite } from "@writeflow/editor";
+import { useAIRewrite } from "@writeflowhq/writeflow";
 
 const {
   rewrite,        // (options?) => void — trigger a rewrite
@@ -495,7 +495,7 @@ const {
 ### useSEOAnalysis
 
 ```tsx
-import { useSEOAnalysis } from "@writeflow/editor";
+import { useSEOAnalysis } from "@writeflowhq/writeflow";
 
 const {
   signals,       // SEOSignal[] — light signals
@@ -508,7 +508,7 @@ const {
 ### useStorage
 
 ```tsx
-import { useStorage } from "@writeflow/editor";
+import { useStorage } from "@writeflowhq/writeflow";
 
 const {
   upload,       // (file, path?) => Promise<UploadedFile | null>
@@ -522,7 +522,7 @@ const {
 ### useTheme
 
 ```tsx
-import { useTheme } from "@writeflow/editor";
+import { useTheme } from "@writeflowhq/writeflow";
 
 const {
   theme,   // ResolvedTheme — resolved mode, colors, preset
@@ -539,8 +539,8 @@ const {
 // app/write/page.tsx
 "use client";
 
-import { Editor } from "@writeflow/editor";
-import "@writeflow/editor/styles.css";
+import { Editor } from "@writeflowhq/writeflow";
+import "@writeflowhq/writeflow/styles.css";
 
 export default function WritePage() {
   return (
@@ -573,8 +573,8 @@ The `<Editor />` is a client component. In App Router, add `"use client"` to the
 
 ```tsx
 // pages/write.tsx
-import { Editor } from "@writeflow/editor";
-import "@writeflow/editor/styles.css";
+import { Editor } from "@writeflowhq/writeflow";
+import "@writeflowhq/writeflow/styles.css";
 
 export default function WritePage() {
   return (
@@ -662,7 +662,7 @@ import type {
   TranslationKey,
   DiffSegment,
   SERPPreviewData,
-} from "@writeflow/editor";
+} from "@writeflowhq/writeflow";
 ```
 
 The public API surface has zero `any`. Full autocomplete and compile-time validation.
@@ -698,7 +698,7 @@ import {
   computeDiff,            // (original, rewritten) => DiffSegment[]
   analyzeContent,         // (editor, seoConfig, aiProvider?) => SEOAnalysis
   generateSERPPreview,    // (title, description, url?) => SERPPreviewData
-} from "@writeflow/editor";
+} from "@writeflowhq/writeflow";
 ```
 
 ### AIConfig

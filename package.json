@@ -1,5 +1,5 @@
 {
-  "name": "@writeflow/editor",
+  "name": "@writeflowhq/writeflow",
   "version": "0.1.0",
   "description": "AI-powered writing infrastructure for developers — drop-in editor component with inline AI rewriting, progressive SEO, and image optimization",
   "type": "module",
