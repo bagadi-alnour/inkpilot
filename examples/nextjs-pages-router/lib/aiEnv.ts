@@ -1,4 +1,4 @@
-import type { AIProvider } from '@writeflow/editor';
+import type { AIProvider } from '@inkpilot/editor';
 
 export type ResolvedAIEnv = {
   provider?: AIProvider;

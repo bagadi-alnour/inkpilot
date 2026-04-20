@@ -1,4 +1,4 @@
-import type { AIProvider } from '@writeflow/editor';
+import type { AIProvider } from '@inkpilot/editor';
 
 type Env = ImportMetaEnv;
 
@@ -36,4 +36,3 @@ export function resolveAIFromEnv(env: Env = import.meta.env): ResolvedAIEnv {
 
   return { provider: undefined, apiKey: genericKey, hasAnyKey };
 }
-

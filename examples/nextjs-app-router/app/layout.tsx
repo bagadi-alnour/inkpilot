@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import '@writeflow/editor/styles.css';
+import '@inkpilot/editor/styles.css';
 import './globals.css';
 
 export const metadata: Metadata = {

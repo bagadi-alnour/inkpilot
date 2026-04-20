@@ -1,4 +1,4 @@
-import type { TranslationStrings } from '@writeflow/editor';
+import type { TranslationStrings } from '@inkpilot/editor';
 
 type Translations = Partial<TranslationStrings>;
 

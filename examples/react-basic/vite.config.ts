@@ -8,8 +8,8 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@writeflow/editor/styles.css': path.join(rootPkg, 'dist/index.css'),
-      '@writeflow/editor': path.join(rootPkg, 'dist/index.js'),
+      '@inkpilot/editor/styles.css': path.join(rootPkg, 'dist/index.css'),
+      '@inkpilot/editor': path.join(rootPkg, 'dist/index.js'),
     },
   },
   optimizeDeps: {

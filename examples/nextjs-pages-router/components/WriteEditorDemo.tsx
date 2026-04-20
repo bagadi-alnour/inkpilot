@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { Editor } from '@writeflow/editor';
+import { Editor } from '@inkpilot/editor';
 import type {
   AIConfig,
   AIProvider,
   EditorContent,
   SEOAnalysis,
   ThemePreset,
-} from '@writeflow/editor';
+} from '@inkpilot/editor';
 import { resolveAIFromEnv } from '@/lib/aiEnv';
 import { locales, translations } from '@/lib/translations';
 

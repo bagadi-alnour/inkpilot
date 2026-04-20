@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Editor } from '@writeflow/editor';
-import type { EditorContent, SEOAnalysis, AIConfig, AIProvider } from '@writeflow/editor';
-import '@writeflow/editor/styles.css';
+import { Editor } from '@inkpilot/editor';
+import type { EditorContent, SEOAnalysis, AIConfig, AIProvider } from '@inkpilot/editor';
+import '@inkpilot/editor/styles.css';
 import { locales, translations } from './translations';
 import { resolveAIFromEnv } from './aiEnv';
 
