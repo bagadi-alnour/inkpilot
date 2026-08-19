@@ -12,7 +12,7 @@ import type {
   UploadedFile,
   PresignedUrlOptions,
 } from '@inkpilot/types';
-import { InkpilotError } from '@inkpilot/utils';
+import { InkpilotError, readProcessEnv } from '@inkpilot/utils';
 import { generateStoragePath } from '../utils';
 import { fetchPresignedUrl, uploadViaPresignedUrl } from '../presigned';
 
@@ -21,19 +21,41 @@ export class S3StorageAdapter implements StorageAdapter {
   private config: StorageConfig;
 
   constructor(config: StorageConfig) {
-    this.config = config;
+    const accessKeyId = config.accessKeyId
+      ?? readProcessEnv('AWS_ACCESS_KEY_ID')
+      ?? readProcessEnv('AWS_ACCESS_KEY');
+    const secretAccessKey = config.secretAccessKey
+      ?? readProcessEnv('AWS_SECRET_ACCESS_KEY');
+    const region = config.region
+      ?? readProcessEnv('AWS_REGION')
+      ?? readProcessEnv('AWS_DEFAULT_REGION')
+      ?? 'us-east-1';
+    const bucket = config.bucket
+      || readProcessEnv('AWS_S3_BUCKET')
+      || readProcessEnv('S3_BUCKET')
+      || '';
 
-    if (config.accessKeyId && config.secretAccessKey) {
+    this.config = { ...config, region, bucket };
+
+    if (accessKeyId && secretAccessKey) {
       this.client = new S3Client({
-        region: config.region ?? 'us-east-1',
+        region,
         endpoint: config.endpoint,
-        credentials: {
-          accessKeyId: config.accessKeyId,
-          secretAccessKey: config.secretAccessKey,
-        },
+        credentials: { accessKeyId, secretAccessKey },
         forcePathStyle: !!config.endpoint,
       });
     }
+  }
+
+  /** Public object URL for a key (matches `put()` URL shape for AWS vs path-style custom endpoints). */
+  private buildPublicObjectUrl(key: string): string {
+    const region = this.config.region ?? 'us-east-1';
+    const bucket = this.config.bucket;
+    if (this.config.endpoint) {
+      const base = this.config.endpoint.replace(/\/$/, '');
+      return `${base}/${bucket}/${key}`;
+    }
+    return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
   }
 
   async put(file: File, path: string): Promise<UploadedFile> {
@@ -67,9 +89,7 @@ export class S3StorageAdapter implements StorageAdapter {
       }),
     );
 
-    const url = this.config.endpoint
-      ? `${this.config.endpoint}/${this.config.bucket}/${storagePath}`
-      : `https://${this.config.bucket}.s3.${this.config.region ?? 'us-east-1'}.amazonaws.com/${storagePath}`;
+    const url = this.buildPublicObjectUrl(storagePath);
 
     const result: UploadedFile = {
       key: storagePath,
@@ -126,12 +146,15 @@ export class S3StorageAdapter implements StorageAdapter {
       }),
     );
 
-    return (response.Contents ?? []).map((obj) => ({
-      key: obj.Key ?? '',
-      url: `https://${this.config.bucket}.s3.${this.config.region ?? 'us-east-1'}.amazonaws.com/${obj.Key ?? ''}`,
-      size: obj.Size ?? 0,
-      mimeType: '',
-    }));
+    return (response.Contents ?? []).map((obj) => {
+      const key = obj.Key ?? '';
+      return {
+        key,
+        url: this.buildPublicObjectUrl(key),
+        size: obj.Size ?? 0,
+        mimeType: '',
+      };
+    });
   }
 
   async getPresignedUrl(key: string, options?: PresignedUrlOptions): Promise<string> {

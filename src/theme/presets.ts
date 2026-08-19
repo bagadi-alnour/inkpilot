@@ -5,11 +5,12 @@ interface FullPreset {
   dark: ThemeColors;
 }
 
+/** Default look is monochrome (no blue primaries); accents use neutrals. */
 const defaultPreset: FullPreset = {
   light: {
-    primary: '#2563eb',
-    secondary: '#7c3aed',
-    accent: '#0891b2',
+    primary: '#0f172a',
+    secondary: '#334155',
+    accent: '#475569',
     background: '#ffffff',
     foreground: '#0f172a',
     border: '#e2e8f0',
@@ -20,9 +21,9 @@ const defaultPreset: FullPreset = {
     success: '#16a34a',
   },
   dark: {
-    primary: '#3b82f6',
-    secondary: '#8b5cf6',
-    accent: '#06b6d4',
+    primary: '#f8fafc',
+    secondary: '#cbd5e1',
+    accent: '#94a3b8',
     background: '#0f172a',
     foreground: '#f1f5f9',
     border: '#334155',

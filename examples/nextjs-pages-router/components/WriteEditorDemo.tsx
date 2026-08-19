@@ -8,12 +8,9 @@ import type {
   SEOAnalysis,
   ThemePreset,
 } from '@inkpilot/editor';
-import { resolveAIFromEnv } from '@/lib/aiEnv';
+import type { AIAvailability } from '@/lib/aiEnv';
+import { createProxyAIConfig } from '@/lib/aiEnv';
 import { locales, translations } from '@/lib/translations';
-
-const envAI = resolveAIFromEnv();
-const envProvider = envAI.provider ?? 'openai';
-const envKey = envAI.apiKey;
 
 const PRESETS: { value: ThemePreset; label: string }[] = [
   { value: 'default', label: 'Default' },
@@ -21,28 +18,27 @@ const PRESETS: { value: ThemePreset; label: string }[] = [
   { value: 'editorial', label: 'Editorial' },
 ];
 
-export default function WriteEditorDemo() {
+export interface WriteEditorDemoProps {
+  availability: AIAvailability;
+}
+
+export default function WriteEditorDemo({ availability }: WriteEditorDemoProps) {
   const [wordCount, setWordCount] = useState(0);
   const [readingTime, setReadingTime] = useState(0);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [preset, setPreset] = useState<ThemePreset>('default');
-  const [provider, setProvider] = useState<AIProvider>(envProvider);
-  const [apiKey, setApiKey] = useState(envKey ?? '');
-  const showKeyInput = !envAI.hasAnyKey;
+  const [provider, setProvider] = useState<AIProvider>(availability.defaultProvider);
   const [locale, setLocale] = useState('en');
 
   const currentLocale = locales.find((l) => l.code === locale) ?? locales[0];
+  const providerEnabled = availability[provider];
 
   const aiConfig: AIConfig | undefined = useMemo(() => {
-    if (!apiKey.trim()) return undefined;
+    if (!providerEnabled) return undefined;
     return {
-      provider,
-      apiKey: apiKey.trim(),
-      defaultTone: 'formal',
-      defaultIntent: 'clarify',
-      preserveMeaning: true,
+      ...createProxyAIConfig(provider),
     };
-  }, [provider, apiKey]);
+  }, [provider, providerEnabled]);
 
   const handleChange = (content: EditorContent) => {
     setWordCount(content.wordCount);
@@ -79,7 +75,7 @@ export default function WriteEditorDemo() {
             Inkpilot Demo
           </h1>
           <p style={{ fontSize: 14, color: subtle, marginTop: 4 }}>
-            <Link href="/" style={{ color: '#2563eb' }}>
+            <Link href="/" style={{ color: '#0f172a' }}>
               ← Home
             </Link>
             {' · '}
@@ -152,56 +148,44 @@ export default function WriteEditorDemo() {
         </div>
       </header>
 
-      {showKeyInput && (
-        <div
+      <div
+        style={{
+          marginBottom: 16,
+          padding: 16,
+          background: panelBg,
+          border: `1px solid ${border}`,
+          borderRadius: 10,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          flexWrap: 'wrap',
+        }}
+      >
+        <select
+          value={provider}
+          onChange={(e) => setProvider(e.target.value as AIProvider)}
           style={{
-            marginBottom: 16,
-            padding: 16,
-            background: panelBg,
+            padding: '8px 12px',
             border: `1px solid ${border}`,
-            borderRadius: 10,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            flexWrap: 'wrap',
+            borderRadius: 6,
+            fontSize: 13,
+            background: inputBg,
+            color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
           }}
         >
-          <select
-            value={provider}
-            onChange={(e) => setProvider(e.target.value as AIProvider)}
-            style={{
-              padding: '8px 12px',
-              border: `1px solid ${border}`,
-              borderRadius: 6,
-              fontSize: 13,
-              background: inputBg,
-              color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
-            }}
-          >
-            <option value="openai">OpenAI</option>
-            <option value="anthropic">Anthropic</option>
-          </select>
-          <input
-            type="password"
-            placeholder={provider === 'openai' ? 'sk-...' : 'sk-ant-...'}
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            style={{
-              flex: 1,
-              minWidth: 240,
-              padding: '8px 12px',
-              border: `1px solid ${border}`,
-              borderRadius: 6,
-              fontSize: 13,
-              background: inputBg,
-              color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
-            }}
-          />
-          <span style={{ fontSize: 12, color: aiConfig ? '#16a34a' : '#94a3b8' }}>
-            {aiConfig ? 'AI enabled' : 'Enter key to enable AI'}
-          </span>
-        </div>
-      )}
+          <option value="openai" disabled={!availability.openai}>
+            OpenAI{availability.openai ? '' : ' (set SECRET_OPENAI_KEY or OPENAI_API_KEY)'}
+          </option>
+          <option value="anthropic" disabled={!availability.anthropic}>
+            Anthropic{availability.anthropic ? '' : ' (set SECRET_ANTHROPIC_KEY or ANTHROPIC_API_KEY)'}
+          </option>
+        </select>
+        <span style={{ fontSize: 12, color: aiConfig ? '#16a34a' : '#94a3b8' }}>
+          {availability.hasAnyKey
+            ? `${provider} requests are proxied through the Next.js server`
+            : 'Set SECRET_OPENAI_KEY / SECRET_ANTHROPIC_KEY (or OPENAI_API_KEY / ANTHROPIC_API_KEY) in .env.local and restart'}
+        </span>
+      </div>
 
       <div
         style={{
@@ -236,8 +220,8 @@ export default function WriteEditorDemo() {
       </div>
 
       <footer style={{ marginTop: 16, fontSize: 12, color: '#94a3b8', textAlign: 'center' }}>
-        Select text for AI tone and intent. Use the toolbar to insert images (demo upload API at{' '}
-        <code>/api/upload</code>).
+        AI calls stay on the Next.js server via <code>/api/ai/openai</code> and{' '}
+        <code>/api/ai/anthropic</code>. Use the toolbar to insert images at <code>/api/upload</code>.
         <br />
         Press <kbd>Cmd+Shift+P</kbd> for the pre-publish SEO panel.
       </footer>

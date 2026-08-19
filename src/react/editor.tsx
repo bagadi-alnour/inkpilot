@@ -5,6 +5,8 @@ import { I18nContext, createI18nValue } from '@inkpilot/i18n';
 import { generateSERPPreview } from '@inkpilot/seo';
 import { blobToDataUrl, processImage, revokeImageProcessingResult } from '@inkpilot/image';
 import { getContent } from '@inkpilot/core';
+import { resolveAIFromEnv } from '@inkpilot/ai';
+import { resolveStorageFromEnv } from '@inkpilot/storage';
 import { useStorage } from './hooks/use-storage';
 import { InkpilotContext } from './context';
 import { useInkpilotEditor } from './hooks/use-editor';
@@ -54,9 +56,19 @@ export function Editor(props: EditorProps) {
   const publishRef = useRef<() => void>(() => undefined);
   const [showSEOPanel, setShowSEOPanel] = useState(false);
 
+  const resolvedAI = useMemo(
+    () => ai ?? resolveAIFromEnv(),
+    [ai],
+  );
+
+  const resolvedStorage = useMemo(
+    () => storage ?? resolveStorageFromEnv(),
+    [storage],
+  );
+
   const { editor, content: currentContent, signals } = useInkpilotEditor({
-    ai,
-    storage,
+    ai: resolvedAI,
+    storage: resolvedStorage,
     seo,
     image: props.image,
     content,
@@ -68,14 +80,14 @@ export function Editor(props: EditorProps) {
     onPublish: () => publishRef.current(),
   });
 
-  const aiRewrite = useAIRewrite(editor, ai);
+  const aiRewrite = useAIRewrite(editor, resolvedAI);
   const {
     analysis,
     isAnalyzing,
     runAnalysis,
-  } = useSEOAnalysis(editor, seo, ai, signals);
+  } = useSEOAnalysis(editor, seo, resolvedAI, signals);
   const { theme: resolvedTheme } = useTheme(theme, containerRef);
-  const { upload: storageUpload } = useStorage(storage);
+  const { upload: storageUpload } = useStorage(resolvedStorage);
 
   useEffect(() => {
     if (showSEOPanel) {
@@ -142,13 +154,17 @@ export function Editor(props: EditorProps) {
         const processed = imageResult.compressed ?? imageResult.original;
         let src: string;
 
-        if (storage) {
+        if (resolvedStorage) {
           const blob = processed.blob;
           const uploadFile = blob instanceof File
             ? blob
             : new File([blob], file.name, { type: blob.type || file.type });
           const uploaded = await storageUpload(uploadFile, file.name);
-          src = uploaded?.url ?? processed.url;
+          if (uploaded) {
+            src = uploaded.url;
+          } else {
+            src = await blobToDataUrl(processed.blob);
+          }
         } else {
           src = await blobToDataUrl(processed.blob);
         }
@@ -163,19 +179,19 @@ export function Editor(props: EditorProps) {
         editor.chain().focus().setImage({ src: fallbackUrl, alt }).run();
       }
     },
-    [editor, props.image, storage, storageUpload],
+    [editor, props.image, resolvedStorage, storageUpload],
   );
 
   const ctxValue = useMemo(
     () => ({
       editor,
-      aiConfig: ai,
-      storageConfig: storage,
+      aiConfig: resolvedAI,
+      storageConfig: resolvedStorage,
       seoConfig: seo,
       themeConfig: theme,
       signals,
     }),
-    [editor, ai, storage, seo, theme, signals],
+    [editor, resolvedAI, resolvedStorage, seo, theme, signals],
   );
 
   return (
@@ -187,7 +203,13 @@ export function Editor(props: EditorProps) {
           style={style}
           data-wf-theme={resolvedTheme.mode}
         >
-          {!readOnly && <Toolbar editor={editor} onImageInsert={handleImageInsert} />}
+          {!readOnly && (
+            <Toolbar
+              editor={editor}
+              onImageInsert={handleImageInsert}
+              themeMode={resolvedTheme.mode}
+            />
+          )}
           <SEOSignalIndicators signals={signals} />
 
           <div style={{ position: 'relative' }}>
@@ -196,13 +218,13 @@ export function Editor(props: EditorProps) {
             {!readOnly && (
               <FloatingToolbar
                 editor={editor}
-                hasAI={!!ai}
+                hasAI={!!resolvedAI}
                 onLiveRewrite={aiRewrite.liveRewrite}
                 onRevert={aiRewrite.revert}
                 isRewriting={aiRewrite.isRewriting}
                 isLive={aiRewrite.isLive}
-                defaultTone={ai?.defaultTone}
-                defaultIntent={ai?.defaultIntent}
+                defaultTone={resolvedAI?.defaultTone}
+                defaultIntent={resolvedAI?.defaultIntent}
               />
             )}
 

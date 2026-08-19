@@ -9,7 +9,7 @@ export async function suggestAltText(
 
   try {
     const result = await aiProvider.suggestMeta(
-      `Generate a concise, descriptive alt text (max 125 characters) for an image. The image appears in the following context:\n\n${context}\n\nReturn only the alt text, nothing else.`,
+      `Generate a concise, descriptive alt text (max 125 characters) for an image.\n\nImage URL (for reference): ${imageUrl}\n\nSurrounding document context:\n\n${context}\n\nReturn only the alt text, nothing else.`,
     );
     return result || null;
   } catch {

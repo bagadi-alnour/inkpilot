@@ -45,3 +45,31 @@ jobs:
             echo "Bundle size exceeds 200KB limit!"
             exit 1
           fi
+
+  # The root tsconfig excludes `examples/`, so example code is only type checked here.
+  typecheck-examples:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Examples depend on the package via `file:../../`, so its dist types must exist first.
+      - name: Build package
+        run: npx tsup
+
+      - name: Type check examples
+        run: |
+          for example in examples/*/; do
+            echo "::group::$example"
+            (cd "$example" && npm ci && npm run typecheck)
+            echo "::endgroup::"
+          done

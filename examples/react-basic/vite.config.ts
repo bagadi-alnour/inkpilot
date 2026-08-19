@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@inkpilot/editor/styles.css': path.join(rootPkg, 'dist/index.css'),
+      '@inkpilot/editor/styles.css': path.join(rootPkg, 'dist/theme/styles.css'),
       '@inkpilot/editor': path.join(rootPkg, 'dist/index.js'),
     },
   },

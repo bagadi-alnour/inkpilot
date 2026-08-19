@@ -41,6 +41,7 @@ export function useInkpilotEditor(options: UseEditorOptions): UseEditorReturn {
   );
 
   const editor = useTiptapEditor({
+    immediatelyRender: false,
     extensions: [
       ...createInkpilotKit({ placeholder: options.placeholder }),
       AIRewriteExtension.configure({ enabled: !!options.ai }),

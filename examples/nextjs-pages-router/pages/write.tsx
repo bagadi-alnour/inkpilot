@@ -1,5 +1,8 @@
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
+import type { GetServerSideProps, InferGetServerSidePropsType } from 'next';
+import type { AIAvailability } from '@/lib/aiEnv';
+import { resolveAIAvailability } from '@/lib/aiEnv';
 
 const WriteEditorDemo = dynamic(() => import('../components/WriteEditorDemo'), {
   ssr: false,
@@ -8,14 +11,28 @@ const WriteEditorDemo = dynamic(() => import('../components/WriteEditorDemo'), {
   ),
 });
 
-export default function WritePage() {
+type WritePageProps = {
+  availability: AIAvailability;
+};
+
+export const getServerSideProps: GetServerSideProps<WritePageProps> = async () => {
+  return await Promise.resolve({
+    props: {
+      availability: resolveAIAvailability(),
+    },
+  });
+};
+
+export default function WritePage({
+  availability,
+}: InferGetServerSidePropsType<typeof getServerSideProps>) {
   return (
     <>
       <Head>
         <title>Write — Inkpilot (Pages Router)</title>
         <meta name="description" content="Inkpilot editor demo with Pages Router" />
       </Head>
-      <WriteEditorDemo />
+      <WriteEditorDemo availability={availability} />
     </>
   );
 }

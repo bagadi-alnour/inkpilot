@@ -23,6 +23,7 @@ export const defaultStrings: TranslationStrings = {
 
   // AI
   'ai.rewrite': 'Rewrite with AI',
+  'ai.rephrase': 'Rephrase',
   'ai.rewriting': 'Rewriting...',
   'ai.accept': 'Accept',
   'ai.reject': 'Reject',

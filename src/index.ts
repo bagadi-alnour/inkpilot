@@ -47,8 +47,8 @@ export type {
 } from './types';
 
 // Utilities for advanced users
-export { createAIProvider } from './ai/provider';
-export { createStorageAdapter } from './storage/factory';
+export { createAIProvider, resolveAIFromEnv } from './ai/provider';
+export { createStorageAdapter, resolveStorageFromEnv } from './storage/factory';
 export { computeDiff } from './ai/diff';
 export { analyzeContent } from './seo/analyzer';
 export { generateSERPPreview } from './seo/serp-preview';

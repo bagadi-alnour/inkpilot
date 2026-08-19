@@ -1,4 +1,4 @@
-export { createAIProvider } from './provider';
+export { createAIProvider, resolveAIFromEnv } from './provider';
 export { createOpenAIAdapter } from './providers/openai';
 export { createAnthropicAdapter } from './providers/anthropic';
 export { executeRewrite, createRewriteSession } from './rewrite';

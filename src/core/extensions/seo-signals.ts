@@ -102,6 +102,9 @@ export const SEOSignalsExtension = Extension.create<SEOSignalsOptions>({
           init(_, state) {
             const signals = computeSignals(state.doc);
             extensionStorage.signals = signals;
+            queueMicrotask(() => {
+              opts.onSignalsUpdate?.(signals);
+            });
             return signals;
           },
           apply(tr, oldSignals, _oldState, newState) {

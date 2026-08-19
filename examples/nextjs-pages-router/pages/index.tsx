@@ -17,8 +17,8 @@ export default function HomePage() {
         </header>
         <main className="wf-main">
           <p className="wf-lead">
-            This example uses the <code>@inkpilot/editor</code> package with the Next.js Pages Router, including a
-            mock upload API route.
+            This example uses the <code>@inkpilot/editor</code> package with the Next.js Pages Router, a server-side
+            AI proxy, and a mock upload API route.
           </p>
           <Link href="/write" className="wf-cta">
             Open editor →

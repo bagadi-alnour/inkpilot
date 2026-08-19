@@ -13,7 +13,11 @@ import "@inkpilot/editor/styles.css";
 function App() {
   return (
     <Editor
-      ai={{ provider: "openai", apiKey: process.env.NEXT_PUBLIC_OPENAI_KEY! }}
+      ai={{
+        provider: "openai",
+        apiKey: "server-proxy",
+        baseURL: "/api/ai/openai",
+      }}
       theme={{ mode: "auto" }}
       onChange={(content) => console.log(content.wordCount)}
     />
@@ -58,6 +62,26 @@ pnpm add @inkpilot/editor
 npm install react react-dom
 ```
 
+### Troubleshooting: pnpm monorepos and `npm` vs `pnpm`
+
+**`ERR_PNPM_PUBLIC_HOIST_PATTERN_DIFF`** means this folder’s `node_modules` was created when **`.npmrc` used a different `public-hoist-pattern`** (or none) than now. pnpm refuses to mutate the tree in place.
+
+1. From the **monorepo root** (e.g. `kawa-web/`), not only `apps/web/`, run a full reinstall so the tree matches the current config:
+   ```bash
+   cd /path/to/your-monorepo-root
+   rm -rf node_modules
+   # if you use per-package node_modules, also remove apps/*/node_modules packages/*/node_modules
+   pnpm install
+   ```
+2. Then add the editor from the app package (or with a filter):
+   ```bash
+   pnpm add @inkpilot/editor --filter your-web-app-name
+   # or: cd apps/web && pnpm add @inkpilot/editor
+   ```
+3. Avoid changing `public-hoist-pattern` in `.npmrc` without redoing step 1 for everyone on the team.
+
+**`npm error Unsupported URL Type "workspace:": workspace:*`** happens when you run **`npm install`** inside a repo that is managed by **pnpm** and uses **`workspace:`** protocol for internal packages. npm does not install that graph. **Use pnpm for all installs** in that monorepo (`pnpm add`, `pnpm install`), or use **only** npm if the whole repo is npm workspaces (different setup).
+
 ---
 
 ## Quick Start
@@ -73,7 +97,8 @@ function WritingPage() {
     <Editor
       ai={{
         provider: "openai",
-        apiKey: process.env.NEXT_PUBLIC_OPENAI_KEY!,
+        apiKey: "server-proxy",
+        baseURL: "/api/ai/openai",
       }}
       storage={{
         provider: "s3",
@@ -95,6 +120,18 @@ function WritingPage() {
 ```
 
 The editor works with zero config — every option is optional. Add features incrementally.
+
+### Environment-based AI and storage (optional)
+
+If you omit the `ai` prop, the editor calls **`resolveAIFromEnv()`** internally and picks a provider from **server-side** env vars (never `NEXT_PUBLIC_*` for keys). Checked names include `OPENAI_API_KEY`, `SECRET_OPENAI_KEY`, `ANTHROPIC_API_KEY`, `SECRET_ANTHROPIC_KEY`, and common aliases (see source: `resolveAIFromEnv` in the package).
+
+If you omit the `storage` prop, **`resolveStorageFromEnv()`** builds S3 config from env when credentials and a bucket are present (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION` / `AWS_REGION`, `S3_BUCKET`, etc.).
+
+Use these only in **server-safe** contexts for keys (e.g. SSR, API routes, or a proxy). For production AI, prefer a **backend proxy** and pass `ai={{ apiKey: "server-proxy", baseURL: "/api/ai/openai", ... }}`.
+
+### Local development against this repo
+
+Point your app at the workspace with **`"@inkpilot/editor": "file:../path/to/ai-editor"`** (adjust the relative path). After changing library source, run **`npm run build`** in the package root so `dist/` is up to date. For Next.js, add **`transpilePackages: ["@inkpilot/editor"]`** in `next.config` when linking.
 
 ---
 
@@ -175,10 +212,11 @@ The core feature. Select text, click "Rewrite," and see an inline diff preview w
 
 ### How It Works
 
-1. **Select text** in the editor
-2. A floating toolbar appears with "Rewrite" and tone/intent options
-3. Click **Rewrite** — tokens stream in and a diff preview shows inline (deletions in red, insertions in green)
-4. Press **Enter** to accept or **Esc** to reject
+1. **Select text** in the editor (at least a couple of characters).
+2. A **floating toolbar** appears with **tone** (formal / casual / persuasive) and **intent** (simplify / expand / clarify) dropdowns — changing them does not run the model until you click an action.
+3. Click **Rewrite with AI** to stream a rewrite using the current tone and intent, or **Rephrase** for a clarify-style pass at the current tone.
+4. While streaming, the selection updates in place; use **Revert** on the bar to restore the original selection.
+5. When not in live mode, the diff panel supports **Accept** / **Reject**; **Enter** / **Esc** also accept or reject where applicable.
 
 ### Supported Providers
 
@@ -196,12 +234,12 @@ Never expose API keys in client-side code for production. Use a proxy:
   ai={{
     provider: "openai",
     apiKey: "proxy-key",
-    baseURL: "/api/ai-proxy",
+    baseURL: "/api/ai/openai",
   }}
 />
 ```
 
-Then proxy requests through your backend.
+Then proxy requests through your backend with server-only keys such as `SECRET_OPENAI_KEY` / `SECRET_ANTHROPIC_KEY`, or the conventional `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`. Never use `NEXT_PUBLIC_*` for provider API keys (Next.js inlines those into the client bundle).
 
 ---
 
@@ -333,14 +371,7 @@ For API routes, server actions, or SSR contexts only. Never use in client-side c
 
 ## Image Optimization
 
-Images dropped or pasted into the editor are automatically processed:
-
-- **Compression** — client-side via web worker (non-blocking)
-- **Responsive sizes** — generates 480w, 768w, 1024w, 1440w variants
-- **Format detection** — WebP/AVIF support detection
-- **Lazy loading** — added automatically
-
-### Configuration
+Images dropped, pasted, or added from the toolbar run through **`processImage`**: compression, optional resizing, and format handling. The editor inserts a **single** `src` (remote URL when storage is configured, otherwise a data URL). Configure limits and quality via `image`:
 
 ```tsx
 <Editor
@@ -348,19 +379,19 @@ Images dropped or pasted into the editor are automatically processed:
     maxFileSize: 1024 * 1024,           // 1MB max (default)
     maxWidth: 2400,                      // Max dimension (default)
     quality: 0.8,                        // Compression quality (default)
-    responsiveSizes: [480, 768, 1024],   // Custom breakpoints
+    responsiveSizes: [480, 768, 1024],   // Used by the image pipeline where applicable
     autoCompress: true,                  // Enable compression (default)
   }}
 />
 ```
 
-When storage is configured, processed images upload automatically and the editor inserts the remote URL. Without storage, images use local blob URLs.
+When storage is configured, uploads run after processing and the editor inserts the returned URL. Failed uploads fall back to a **data URL** so the image is still visible (no broken revoked blob URLs).
 
 ---
 
 ## Theming
 
-Inkpilot uses CSS variables for all visual styling. Three built-in presets, dark/light mode support, and full customization.
+Inkpilot uses CSS variables for all visual styling. Three built-in presets, dark/light mode support, and full customization. The **default** preset uses a **neutral, monochrome** chrome (no blue primary) so toolbar and floating controls stay black/white with the active theme; you can still override `--wf-*` variables or pass `theme.colors` for your own brand.
 
 ### Mode
 
@@ -385,10 +416,10 @@ Inkpilot uses CSS variables for all visual styling. Three built-in presets, dark
   theme={{
     mode: "dark",
     colors: {
-      primary: "#6366f1",
+      primary: "#f8fafc",
       background: "#0f172a",
       foreground: "#e2e8f0",
-      accent: "#818cf8",
+      accent: "#cbd5e1",
       border: "#334155",
       muted: "#1e293b",
       mutedForeground: "#94a3b8",
@@ -406,7 +437,7 @@ All styling uses `--wf-*` CSS variables. Override them in your own CSS:
 
 ```css
 .inkpilot-editor {
-  --wf-color-primary: #6366f1;
+  --wf-color-primary: #0f172a;
   --wf-color-bg: #ffffff;
   --wf-color-fg: #1e293b;
   --wf-font-body: "Inter", sans-serif;
@@ -547,7 +578,8 @@ export default function WritePage() {
     <Editor
       ai={{
         provider: "openai",
-        apiKey: process.env.NEXT_PUBLIC_OPENAI_KEY!,
+        apiKey: "server-proxy",
+        baseURL: "/api/ai/openai",
       }}
       storage={{
         provider: "s3",
@@ -579,7 +611,7 @@ import "@inkpilot/editor/styles.css";
 export default function WritePage() {
   return (
     <Editor
-      ai={{ provider: "openai", apiKey: process.env.NEXT_PUBLIC_OPENAI_KEY! }}
+      ai={{ provider: "openai", apiKey: "server-proxy", baseURL: "/api/ai/openai" }}
       storage={{ provider: "s3", bucket: "my-bucket", presignedUrlEndpoint: "/api/upload" }}
       theme={{ mode: "dark" }}
       onPublish={async (content) => {
@@ -592,6 +624,8 @@ export default function WritePage() {
   );
 }
 ```
+
+Set `SECRET_OPENAI_KEY` / `SECRET_ANTHROPIC_KEY` (or `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`) in `.env.local`, then proxy provider requests through your Next.js API routes. Do not use `NEXT_PUBLIC_*` for API keys.
 
 ### Presigned Upload API Route
 
@@ -694,7 +728,9 @@ For advanced use cases, these are available as standalone imports:
 ```tsx
 import {
   createAIProvider,       // (config: AIConfig) => AIProviderAdapter
+  resolveAIFromEnv,       // (overrides?) => AIConfig | undefined — server env keys
   createStorageAdapter,   // (config: StorageConfig) => StorageAdapter
+  resolveStorageFromEnv,  // (overrides?) => StorageConfig | undefined — AWS/S3 env
   computeDiff,            // (original, rewritten) => DiffSegment[]
   analyzeContent,         // (editor, seoConfig, aiProvider?) => SEOAnalysis
   generateSERPPreview,    // (title, description, url?) => SERPPreviewData
@@ -762,13 +798,25 @@ Full list of translatable keys:
 
 **Toolbar:** `toolbar.bold`, `toolbar.italic`, `toolbar.underline`, `toolbar.strikethrough`, `toolbar.heading1`, `toolbar.heading2`, `toolbar.heading3`, `toolbar.bulletList`, `toolbar.orderedList`, `toolbar.blockquote`, `toolbar.codeBlock`, `toolbar.link`, `toolbar.image`, `toolbar.alignLeft`, `toolbar.alignCenter`, `toolbar.alignRight`, `toolbar.undo`, `toolbar.redo`
 
-**AI:** `ai.rewrite`, `ai.rewriting`, `ai.accept`, `ai.reject`, `ai.options`, `ai.tone`, `ai.intent`, `ai.tone.formal`, `ai.tone.casual`, `ai.tone.persuasive`, `ai.intent.simplify`, `ai.intent.expand`, `ai.intent.clarify`, `ai.preserveMeaning`, `ai.restructure`, `ai.restructuring`
+**AI:** `ai.rewrite`, `ai.rephrase`, `ai.rewriting`, `ai.accept`, `ai.reject`, `ai.options`, `ai.tone`, `ai.intent`, `ai.tone.formal`, `ai.tone.casual`, `ai.tone.persuasive`, `ai.intent.simplify`, `ai.intent.expand`, `ai.intent.clarify`, `ai.preserveMeaning`, `ai.restructure`, `ai.restructuring`
 
 **SEO:** `seo.missingH1`, `seo.weakTitle`, `seo.headingHierarchy`, `seo.emptyAlt`, `seo.panel.title`, `seo.panel.score`, `seo.panel.issues`, `seo.panel.suggestions`, `seo.panel.publish`, `seo.panel.publishAnyway`, `seo.panel.close`, `seo.panel.apply`, `seo.panel.dismiss`, `seo.serp.title`, `seo.serp.preview`
 
 **Image:** `image.upload`, `image.uploading`, `image.dropHere`, `image.altText`, `image.suggestAlt`
 
 **General:** `general.loading`, `general.error`, `general.cancel`, `general.save`, `general.placeholder`
+
+---
+
+## Publishing (maintainers)
+
+From a clean tree with tests and lint passing, bump **`version`** in `package.json`, run **`npm run build`**, then:
+
+```bash
+npm publish --access public
+```
+
+If npm requires 2FA, append **`--otp=<code>`**. This does not push git; tag and push the release commit when you are ready.
 
 ---
 

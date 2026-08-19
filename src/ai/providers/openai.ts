@@ -18,7 +18,7 @@ export function createOpenAIAdapter(config: AIConfig): AIProviderAdapter {
       const result = streamText({
         model,
         prompt,
-        maxTokens: 2000,
+        maxOutputTokens: 2000,
         temperature: 0.7,
         abortSignal: params.signal,
       });
@@ -38,7 +38,7 @@ export function createOpenAIAdapter(config: AIConfig): AIProviderAdapter {
       const result = streamText({
         model,
         prompt,
-        maxTokens: 4000,
+        maxOutputTokens: 4000,
         temperature: 0.7,
         abortSignal: params.signal,
       });
@@ -54,7 +54,7 @@ export function createOpenAIAdapter(config: AIConfig): AIProviderAdapter {
       const result = streamText({
         model,
         prompt,
-        maxTokens: 200,
+        maxOutputTokens: 200,
         temperature: 0.8,
       });
 
@@ -76,7 +76,7 @@ export function createOpenAIAdapter(config: AIConfig): AIProviderAdapter {
       const result = streamText({
         model,
         prompt,
-        maxTokens: 200,
+        maxOutputTokens: 200,
         temperature: 0.7,
       });
 

@@ -34,7 +34,14 @@ export function FloatingToolbar({
   const [intent, setIntent] = useState<AIIntent>(defaultIntent);
   const ref = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const hasTriggered = useRef(false);
+
+  useEffect(() => {
+    setTone(defaultTone);
+  }, [defaultTone]);
+
+  useEffect(() => {
+    setIntent(defaultIntent);
+  }, [defaultIntent]);
 
   const updatePosition = useCallback(() => {
     if (!editor) return;
@@ -68,7 +75,6 @@ export function FloatingToolbar({
       if (isLive) return;
       clearTimeout(timerRef.current);
       setVisible(false);
-      hasTriggered.current = false;
       timerRef.current = setTimeout(updatePosition, 300);
     };
 
@@ -102,27 +108,25 @@ export function FloatingToolbar({
     };
   }, [visible, isLive]);
 
-  const handleToneChange = useCallback(
-    (newTone: AITone) => {
-      setTone(newTone);
-      hasTriggered.current = true;
-      onLiveRewrite(newTone, intent);
-    },
-    [intent, onLiveRewrite],
-  );
+  const handleToneChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setTone(e.target.value as AITone);
+  }, []);
 
-  const handleIntentChange = useCallback(
-    (newIntent: AIIntent) => {
-      setIntent(newIntent);
-      hasTriggered.current = true;
-      onLiveRewrite(tone, newIntent);
-    },
-    [tone, onLiveRewrite],
-  );
+  const handleIntentChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setIntent(e.target.value as AIIntent);
+  }, []);
+
+  const handleRewrite = useCallback(() => {
+    onLiveRewrite(tone, intent);
+  }, [tone, intent, onLiveRewrite]);
+
+  /** Lighter rewrite: same tone, clarify intent (clearer wording, similar length). */
+  const handleRephrase = useCallback(() => {
+    onLiveRewrite(tone, 'clarify');
+  }, [tone, onLiveRewrite]);
 
   const handleRevert = useCallback(() => {
     onRevert();
-    hasTriggered.current = false;
     setVisible(false);
   }, [onRevert]);
 
@@ -136,12 +140,12 @@ export function FloatingToolbar({
       role="toolbar"
       aria-label="AI writing tools"
     >
-      {isRewriting && <span className="wf-spinner" />}
+      {isRewriting && <span className="wf-spinner" aria-hidden />}
 
       <select
         className="wf-live-select"
         value={tone}
-        onChange={(e) => handleToneChange(e.target.value as AITone)}
+        onChange={handleToneChange}
         disabled={isRewriting}
         aria-label={t('ai.tone')}
       >
@@ -155,7 +159,7 @@ export function FloatingToolbar({
       <select
         className="wf-live-select"
         value={intent}
-        onChange={(e) => handleIntentChange(e.target.value as AIIntent)}
+        onChange={handleIntentChange}
         disabled={isRewriting}
         aria-label={t('ai.intent')}
       >
@@ -166,17 +170,25 @@ export function FloatingToolbar({
         ))}
       </select>
 
-      {!hasTriggered.current && !isLive && (
-        <button
-          type="button"
-          className="wf-floating-toolbar-btn"
-          onClick={() => {
-            hasTriggered.current = true;
-            onLiveRewrite(tone, intent);
-          }}
-        >
-          {t('ai.rewrite')}
-        </button>
+      {!isLive && (
+        <>
+          <button
+            type="button"
+            className="wf-floating-toolbar-btn"
+            onClick={handleRewrite}
+            disabled={isRewriting}
+          >
+            {t('ai.rewrite')}
+          </button>
+          <button
+            type="button"
+            className="wf-floating-toolbar-btn wf-floating-toolbar-btn-secondary"
+            onClick={handleRephrase}
+            disabled={isRewriting}
+          >
+            {t('ai.rephrase')}
+          </button>
+        </>
       )}
 
       {isLive && (

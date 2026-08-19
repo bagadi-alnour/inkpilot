@@ -1,36 +1,52 @@
-import type { AIProvider } from '@inkpilot/editor';
+import type { AIConfig, AIProvider } from '@inkpilot/editor';
 
-export type ResolvedAIEnv = {
-  provider?: AIProvider;
-  apiKey?: string;
+export type AIAvailability = {
+  openai: boolean;
+  anthropic: boolean;
   hasAnyKey: boolean;
+  defaultProvider: AIProvider;
 };
 
-function readKey(value: string | undefined): string | undefined {
+function readValue(value: string | undefined): string | undefined {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-/**
- * Reads AI keys from Next.js public env (inlined at build time on the client).
- */
-export function resolveAIFromEnv(): ResolvedAIEnv {
-  const openaiKey = readKey(process.env.NEXT_PUBLIC_OPENAI_KEY);
-  const anthropicKey = readKey(process.env.NEXT_PUBLIC_ANTHROPIC_KEY);
+export function resolveAIAvailability(env: NodeJS.ProcessEnv = process.env): AIAvailability {
+  const openai = Boolean(
+    readValue(env.OPENAI_API_KEY) ?? readValue(env.SECRET_OPENAI_KEY) ?? readValue(env.OPENAI_KEY),
+  );
+  const anthropic = Boolean(
+    readValue(env.ANTHROPIC_API_KEY) ??
+      readValue(env.SECRET_ANTHROPIC_KEY) ??
+      readValue(env.ANTHROPIC_KEY),
+  );
 
-  const hasAnyKey = Boolean(openaiKey || anthropicKey);
-
-  const explicit = readKey(process.env.NEXT_PUBLIC_AI_PROVIDER)?.toLowerCase();
-  if (explicit === 'openai') {
-    return { provider: 'openai', apiKey: openaiKey, hasAnyKey };
+  let defaultProvider: AIProvider;
+  if (openai) {
+    defaultProvider = 'openai';
+  } else if (anthropic) {
+    defaultProvider = 'anthropic';
+  } else {
+    defaultProvider = 'openai';
   }
-  if (explicit === 'anthropic') {
-    return { provider: 'anthropic', apiKey: anthropicKey, hasAnyKey };
-  }
 
-  if (anthropicKey) return { provider: 'anthropic', apiKey: anthropicKey, hasAnyKey };
-  if (openaiKey) return { provider: 'openai', apiKey: openaiKey, hasAnyKey };
+  return {
+    openai,
+    anthropic,
+    hasAnyKey: openai || anthropic,
+    defaultProvider,
+  };
+}
 
-  return { provider: undefined, apiKey: undefined, hasAnyKey };
+export function createProxyAIConfig(provider: AIProvider): AIConfig {
+  return {
+    provider,
+    apiKey: 'server-proxy',
+    baseURL: `/api/ai/${provider}`,
+    defaultTone: 'casual',
+    defaultIntent: 'clarify',
+    preserveMeaning: true,
+  };
 }

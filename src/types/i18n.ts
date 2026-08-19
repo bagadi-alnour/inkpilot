@@ -26,6 +26,7 @@ export interface TranslationStrings {
 
   // AI
   'ai.rewrite': string;
+  'ai.rephrase': string;
   'ai.rewriting': string;
   'ai.accept': string;
   'ai.reject': string;
