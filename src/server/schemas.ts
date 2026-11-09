@@ -4,7 +4,6 @@ import type { AltRequest, DescriptionsRequest, FixRequest, RewriteRequest, Title
 
 const seoContextSchema = z.object({
   keywords: z.array(z.string().max(120)).max(10),
-  readingGrade: z.number().min(1).max(20).optional(),
 });
 
 const contentPayloadShape = {
