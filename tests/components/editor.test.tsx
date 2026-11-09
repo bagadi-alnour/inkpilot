@@ -76,6 +76,16 @@ describe('Editor', () => {
     vi.unstubAllGlobals();
   });
 
+  it('hands the editor to onReady, whose requestPublish opens the publish panel', async () => {
+    const onReady = vi.fn<(editor: TiptapEditor) => void>();
+    const { editor } = await renderEditor({ onReady });
+    expect(onReady).toHaveBeenCalledWith(editor);
+    act(() => {
+      editor.commands.requestPublish();
+    });
+    expect(screen.getByRole('complementary', { name: 'Review and publish' })).toBeDefined();
+  });
+
   it('opens the publish panel from the score; the slug follows the title until edited', async () => {
     const onMetaChange = vi.fn<(meta: PublishMeta) => void>();
     await renderEditor({ onMetaChange });

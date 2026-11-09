@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { EditorContent, useEditorState } from '@tiptap/react';
+import type { Editor as TiptapEditor } from '@tiptap/core';
 import type { EditorConfig, PublishMeta } from '@inkpilot/types';
 import { I18nContext, createI18nValue } from '@inkpilot/i18n';
 import { createFetchTransport } from '../ai/transport';
@@ -24,6 +25,11 @@ export interface EditorProps extends EditorConfig {
   readOnly?: boolean;
   autoFocus?: boolean;
   placeholder?: string;
+  /**
+   * Called once with the Tiptap editor when it's ready, to drive it from your own UI:
+   * `editor.commands.fixIssue(id)`, `acceptRewrite()`, `requestPublish()` and the rest.
+   */
+  onReady?: (editor: TiptapEditor) => void;
 }
 
 export function Editor(props: EditorProps) {
@@ -100,6 +106,12 @@ export function Editor(props: EditorProps) {
         .run(),
     onPublish: () => publishRef.current(),
   });
+
+  const onReadyRef = useRef(props.onReady);
+  onReadyRef.current = props.onReady;
+  useEffect(() => {
+    if (editor) onReadyRef.current?.(editor);
+  }, [editor]);
 
   const { theme: resolvedTheme } = useTheme(theme, containerRef);
   const h1 = useEditorState({ editor, selector: ({ editor: ed }) => (ed ? (firstH1(ed.state.doc)?.text.trim() ?? '') : '') }) ?? '';

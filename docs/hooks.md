@@ -33,7 +33,7 @@ Resolves `mode: 'auto'` and the preset into CSS variables on the container. `<Ed
 
 ## Commands
 
-The extensions add Tiptap commands you can call from anywhere:
+The extensions add Tiptap commands you can call from anywhere. With `<Editor />`, get the editor from `onReady={(editor) => ...}`.
 
 | Command | |
 |---|---|
@@ -44,3 +44,4 @@ The extensions add Tiptap commands you can call from anywhere:
 | `insertImageFiles(files, pos?)` | insert and upload images |
 | `suggestAltText(pos)` | AI alt text for the image at `pos` |
 | `cancelUploads()` | stop uploads in flight and remove those images |
+| `requestPublish()` | open the publish panel, or call `onPublish` when the panel is off |

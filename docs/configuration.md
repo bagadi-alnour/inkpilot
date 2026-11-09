@@ -26,6 +26,7 @@ interface EditorProps {
   readOnly?: boolean;
   autoFocus?: boolean;
   placeholder?: string;
+  onReady?: (editor: TiptapEditor) => void;       // once, to drive it with commands (see Hooks)
 }
 ```
 

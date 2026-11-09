@@ -17,6 +17,7 @@ SEO checks and AI now work as one loop: issues point at text, Fix with AI propos
 - Publish panel (side drawer): checks with Fix / Suggest / Show, SEO title and description with on-demand AI suggestions, a slug that follows the title until edited, and a search preview. Publishing waits for uploads in flight, which the panel can cancel (`cancelUploads()`). `defaultMeta`, `onMetaChange`, `seo.baseUrl`.
 - `image.upload` (any `ImageUploader`) and `presignedUpload(endpoint)`. Uploads stay correct under undo and redo, failed uploads are removed and reported through `onUploadError`, and images are compressed on a canvas before upload. AI alt text is applied only if the writer hasn't typed one. When a suggestion can't be made (image blocked by CORS, `visionModel: false`), the check says why.
 - `useSEOReport`, `slugify`, `analyzeDocument`, `createFetchTransport`, and a `transport` option for custom backends.
+- `onReady(editor)` on `<Editor />` and a `requestPublish()` command, to drive the editor from your own UI.
 - `t(key, params)` with `{placeholder}` values; translation keys for every SEO issue code are type-checked.
 - `codeBlock` prop: pass your own code block node, for example `CodeBlockLowlight` with the languages you need.
 - `npm run check:bundle`: enforces the client/server import boundary and a 30 kB gzip budget (excluding React and Tiptap).
