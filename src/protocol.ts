@@ -133,6 +133,8 @@ export type ProtocolErrorCode =
   | 'method-not-allowed'
   /** The endpoint can't do this task, e.g. alt text without a model that reads images (501). */
   | 'unsupported'
+  /** Never sent by the handler: for your own rate limiter in front of it (429). */
+  | 'rate-limited'
   | 'internal';
 
 /** JSON body of every non-2xx response. */

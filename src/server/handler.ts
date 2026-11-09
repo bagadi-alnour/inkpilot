@@ -51,6 +51,7 @@ const STATUS: Record<ProtocolErrorCode, number> = {
   'too-large': 413,
   internal: 500,
   unsupported: 501,
+  'rate-limited': 429,
 };
 
 /** Like `AbortSignal.any`, which some runtimes (e.g. Next.js edge) lack. */
