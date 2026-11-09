@@ -110,6 +110,7 @@ export const defaultStrings: TranslationStrings = {
   'publish.serpNote': 'Approximate. Search engines decide how much of the title and description to show.',
   'publish.publish': 'Publish',
   'publish.uploading': 'Uploading {count} image(s)…',
+  'publish.cancelUploads': 'Cancel uploads and remove the image(s)',
   'publish.localImage': '{count} image(s) are still local previews. Insert them again before publishing.',
 
   // General

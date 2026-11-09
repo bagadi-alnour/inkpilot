@@ -43,3 +43,4 @@ The extensions add Tiptap commands you can call from anywhere:
 | `fixIssue(id)`, `ignoreIssue(id)`, `refreshReport()` | SEO issues |
 | `insertImageFiles(files, pos?)` | insert and upload images |
 | `suggestAltText(pos)` | AI alt text for the image at `pos` |
+| `cancelUploads()` | stop uploads in flight and remove those images |

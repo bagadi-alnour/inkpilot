@@ -53,6 +53,8 @@ declare module '@tiptap/core' {
       insertImageFiles: (files: File[], pos?: number) => ReturnType;
       /** Ask the AI endpoint for alt text for the image at `pos`; applied only if alt is still empty. */
       suggestAltText: (pos: number) => ReturnType;
+      /** Stop every upload in flight and remove those images. Not reported to `onUploadError`. */
+      cancelUploads: () => ReturnType;
     };
   }
   interface Storage {
@@ -266,11 +268,25 @@ export const ImageUploadExtension = Extension.create<ImageUploadOptions, ImageUp
           return inserted;
         },
 
+      cancelUploads:
+        () =>
+        ({ editor, dispatch }) => {
+          const pending = [...storage.uploads].flatMap(([id, entry]) => (entry.status === 'pending' ? [{ id, entry }] : []));
+          if (!pending.length) return false;
+          if (!dispatch) return true;
+          for (const { entry } of pending) entry.controller.abort();
+          // After this command's own transaction: settling dispatches.
+          queueMicrotask(() => pending.forEach(({ id }) => settle(editor, storage, id, { status: 'failed' })));
+          return true;
+        },
+
       suggestAltText:
         (pos) =>
         ({ editor, state, dispatch }) => {
           const node = state.doc.nodeAt(pos);
           if (node?.type.name !== 'image' || !options.getTransport() || String(node.attrs.alt ?? '').trim()) return false;
+          // Still uploading: `autoAltText` asks once the upload lands, or the writer can after.
+          if (node.attrs.uploadId) return false;
           // A failed request may be retried; the others won't change by trying again.
           const status = altStatusAt(state, storage, pos);
           if (status && status !== 'failed') return false;

@@ -83,6 +83,7 @@ export interface TranslationStrings extends IssueStrings {
   'publish.serpNote': string;
   'publish.publish': string;
   'publish.uploading': string;
+  'publish.cancelUploads': string;
   'publish.localImage': string;
 
   // General
