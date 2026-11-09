@@ -31,6 +31,10 @@ export function IssuePopover({ editor, containerRef, canFix }: IssuePopoverProps
   const { t } = useTranslation();
   const [anchor, setAnchor] = useState<Anchor | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Checked when the hide timer fires. React runs onMouseEnter during the browser's
+  // `mouseout`, before the editor's `mouseleave` schedules a hide, so clearing the
+  // timer on enter alone isn't enough.
+  const overPopover = useRef(false);
 
   const { issue } = useEditorState({
     editor,
@@ -47,7 +51,9 @@ export function IssuePopover({ editor, containerRef, canFix }: IssuePopoverProps
 
     const scheduleHide = () => {
       clearTimeout(hideTimer.current);
-      hideTimer.current = setTimeout(() => setAnchor(null), HIDE_DELAY_MS);
+      hideTimer.current = setTimeout(() => {
+        if (!overPopover.current) setAnchor(null);
+      }, HIDE_DELAY_MS);
     };
     const show = (event: MouseEvent) => {
       const target = (event.target as Element | null)?.closest?.('[data-ip-issue]');
@@ -75,6 +81,12 @@ export function IssuePopover({ editor, containerRef, canFix }: IssuePopoverProps
     };
   }, [editor, containerRef]);
 
+  const visible = !!(editor && anchor && issue);
+  useEffect(() => {
+    // An unmounted popover gets no mouseleave; don't let a stale flag keep the next one open.
+    if (!visible) overPopover.current = false;
+  }, [visible]);
+
   if (!editor || !anchor || !issue) return null;
 
   const close = () => setAnchor(null);
@@ -84,8 +96,14 @@ export function IssuePopover({ editor, containerRef, canFix }: IssuePopoverProps
       role="dialog"
       aria-label={t(`seo.issue.${issue.code}`)}
       style={{ top: anchor.top, left: anchor.left, width: POPOVER_WIDTH }}
-      onMouseEnter={() => clearTimeout(hideTimer.current)}
-      onMouseLeave={() => setAnchor(null)}
+      onMouseEnter={() => {
+        overPopover.current = true;
+        clearTimeout(hideTimer.current);
+      }}
+      onMouseLeave={() => {
+        overPopover.current = false;
+        setAnchor(null);
+      }}
     >
       <p>
         <strong>{t(`seo.issue.${issue.code}`)}.</strong> {t(`seo.issue.${issue.code}.detail`, issue.params)}
