@@ -92,7 +92,7 @@ export const defaultStrings: TranslationStrings = {
   'publish.title': 'Review and publish',
   'publish.close': 'Close',
   'publish.scoreOf': 'of 100 on Inkpilot checks',
-  'publish.checks': '{count} checks to review',
+  'publish.checks': 'Checks to review: {count}',
   'publish.noChecks': 'Nothing to review.',
   'publish.fix': 'Fix',
   'publish.show': 'Show',
