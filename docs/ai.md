@@ -9,7 +9,7 @@ import { createInkpilotHandler } from '@inkpilot/editor/server';
 
 export const POST = createInkpilotHandler({
   model,                          // any AI SDK LanguageModel
-  visionModel,                    // optional, for alt text; defaults to `model`
+  visionModel,                    // optional, for alt text; defaults to `model`; `false` if none reads images
   authorize: (request) => ...,    // required; 'public' for demos only
   limits: {
     maxInputChars: 20_000,        // content + context per request
@@ -45,7 +45,7 @@ type StreamEvent =
   | { type: 'error'; code: 'truncated' | 'model-error' | 'aborted' | ...; message: string };
 ```
 
-A proposal can be accepted only after `done`. If the model hits its token limit, the stream ends with `error: truncated`. If the connection closes without a terminal event, the client marks the proposal `incomplete`. Errors before streaming starts (bad body, auth, size) are JSON `{ error: { code, message } }` with an HTTP status.
+A proposal can be accepted only after `done`. If the model hits its token limit, the stream ends with `error: truncated`. If the connection closes without a terminal event, the client marks the proposal `incomplete`. Errors before streaming starts (bad body, auth, size) are JSON `{ error: { code, message } }` with an HTTP status. With `visionModel: false`, the `alt` task answers 501 `unsupported`.
 
 ## Security
 

@@ -25,8 +25,11 @@ export interface InkpilotHandlerLimits {
 export interface InkpilotHandlerOptions {
   /** Any AI SDK language model, e.g. `anthropic('claude-sonnet-5-5')`. */
   model: LanguageModel;
-  /** Model for alt text; must accept images. Defaults to `model`. */
-  visionModel?: LanguageModel;
+  /**
+   * Model for alt text; must accept images. Defaults to `model`. Pass `false` when
+   * `model` can't read images: alt requests then answer 501 and the editor says why.
+   */
+  visionModel?: LanguageModel | false;
   /**
    * Decide whether a request may use the model. Required: the endpoint spends your
    * tokens. Pass `'public'` only for demos, and rate-limit at your host either way.
@@ -47,6 +50,7 @@ const STATUS: Record<ProtocolErrorCode, number> = {
   'method-not-allowed': 405,
   'too-large': 413,
   internal: 500,
+  unsupported: 501,
 };
 
 /** Like `AbortSignal.any`, which some runtimes (e.g. Next.js edge) lack. */
@@ -179,6 +183,9 @@ async function jsonResponse(request: JsonRequest, ctx: Context): Promise<Respons
         return Response.json(output, { headers: { 'cache-control': 'no-store' } });
       }
       case 'alt': {
+        if (ctx.options.visionModel === false) {
+          return errorResponse('unsupported', 'This endpoint has no model that reads images.');
+        }
         const { output } = await generateText({
           ...common,
           model: ctx.options.visionModel ?? ctx.options.model,

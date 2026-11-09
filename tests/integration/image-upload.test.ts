@@ -2,8 +2,9 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { Editor } from '@tiptap/core';
 import type { ImageConfig, UploadedImage } from '../../src/types/image';
 import { createInkpilotKit } from '../../src/core/extensions/inkpilot-kit';
-import { ImageUploadExtension } from '../../src/core/extensions/image-upload';
-import type { InkpilotTransport } from '../../src/ai/transport';
+import { altStatusAt, ImageUploadExtension } from '../../src/core/extensions/image-upload';
+import type { InkpilotTransport, JsonResult } from '../../src/ai/transport';
+import type { AltRequest } from '../../src/protocol';
 import { flush } from '../helpers/editor';
 
 let editor: Editor;
@@ -33,14 +34,14 @@ function manualUploader() {
   return { upload, calls };
 }
 
-function setup(config: ImageConfig, transport?: InkpilotTransport) {
+function setup(config: ImageConfig, transport?: InkpilotTransport, content = '<p>Before</p><p>After</p>') {
   editor = new Editor({
     element: document.createElement('div'),
     extensions: [
       ...createInkpilotKit(),
       ImageUploadExtension.configure({ getConfig: () => config, getTransport: () => transport }),
     ],
-    content: '<p>Before</p><p>After</p>',
+    content,
   });
 }
 
@@ -183,5 +184,63 @@ describe('image uploads', () => {
     answer!('AI description');
     await flush();
     expect(images().find((i) => i.src.endsWith('b.png'))?.alt).toBe('Typed by me');
+  });
+});
+
+describe('alt text suggestions for existing images', () => {
+  const CONTENT = '<p>Weekly build minutes.</p><img src="https://cdn.example.com/a.png" alt=""><img src="https://cdn.example.com/b.png" alt="">';
+  const imagePositions = () => {
+    const found: number[] = [];
+    editor.state.doc.descendants((node, pos) => void (node.type.name === 'image' && found.push(pos)));
+    return found;
+  };
+  const statusOf = (pos: number) => altStatusAt(editor.state, editor.storage.imageUpload, pos);
+
+  /** A transport answering alt requests with `results`, in order. */
+  function altTransport(...results: JsonResult<AltRequest>[]): InkpilotTransport {
+    return {
+      stream: () => (async function* () {})(),
+      json: (async () => results.shift()!) as InkpilotTransport['json'],
+    };
+  }
+  // A response-like object: Node's Response would not keep the type of jsdom's Blob.
+  const servePng = () => vi.stubGlobal('fetch', async () => ({ ok: true, blob: async () => png() }));
+
+  it('marks an image the browser cannot load as unreachable and stops offering the fix for it', async () => {
+    vi.stubGlobal('fetch', async () => {
+      throw new TypeError('Failed to fetch');
+    });
+    setup({}, altTransport(), CONTENT);
+    const [a, b] = imagePositions();
+    expect(editor.commands.suggestAltText(a)).toBe(true);
+    await flush();
+    expect(statusOf(a)).toBe('unreachable');
+    expect(editor.can().suggestAltText(a)).toBe(false);
+    expect(editor.can().suggestAltText(b)).toBe(true);
+  });
+
+  it('stops offering the fix for every image when the endpoint has no model that reads images', async () => {
+    servePng();
+    setup({}, altTransport({ ok: false, code: 'unsupported', message: 'No vision model.' }), CONTENT);
+    const [a, b] = imagePositions();
+    editor.commands.suggestAltText(a);
+    await flush();
+    expect(statusOf(b)).toBe('unsupported');
+    expect(editor.can().suggestAltText(b)).toBe(false);
+  });
+
+  it('lets a failed request be retried, and clears the failure when it works', async () => {
+    servePng();
+    setup({}, altTransport({ ok: false, code: 'internal', message: 'Model error.' }, { ok: true, data: { alt: 'Bar chart of build minutes' } }), CONTENT);
+    const [a] = imagePositions();
+    editor.commands.suggestAltText(a);
+    await flush();
+    expect(statusOf(a)).toBe('failed');
+    expect(editor.can().suggestAltText(a)).toBe(true);
+
+    editor.commands.suggestAltText(a);
+    await flush();
+    expect(statusOf(a)).toBeUndefined();
+    expect(images()[0].alt).toBe('Bar chart of build minutes');
   });
 });

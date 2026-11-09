@@ -10,6 +10,7 @@ import { PROTOCOL_VERSION } from '../../protocol';
 import type { InkpilotTransport } from '../../ai/transport';
 import { DEFAULT_RULE_OPTIONS } from '../../seo/engine';
 import type { RuleOptions } from '../../seo/engine';
+import { AltNote } from './alt-note';
 
 interface PublishDrawerProps {
   editor: Editor;
@@ -49,6 +50,8 @@ export function PublishDrawer(props: PublishDrawerProps) {
     selector: ({ editor: ed }) => ({
       report: getSEOReport(ed.state),
       uploading: pendingUploads(ed.state, ed.storage.imageUpload).length,
+      // Not read directly: re-renders the alt text notes when a request changes state.
+      altRevision: ed.storage.imageUpload.altRevision,
     }),
   });
 
@@ -149,6 +152,7 @@ export function PublishDrawer(props: PublishDrawerProps) {
               <div>
                 <strong>{t(`seo.issue.${issue.code}`)}</strong>
                 <span>{t(`seo.issue.${issue.code}.detail`, issue.params)}</span>
+                {issue.fix === 'ai-alt' && issue.range && <AltNote editor={editor} pos={issue.range.from} />}
               </div>
               {issueAction(issue)}
             </li>

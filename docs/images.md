@@ -66,4 +66,10 @@ With AI configured, Inkpilot asks the `alt` task for a description after each up
 
 For existing images without alt text, the "Image without alt text" check has a Fix button. That one has to read the image in the browser, so it needs CORS on remote images.
 
+When a suggestion can't be made, the check says why instead of failing silently:
+
+- The browser couldn't load the image (usually a host without CORS). The Fix button goes away for that image.
+- The handler has no model that reads images. Set `visionModel: false` when your `model` is text-only: the `alt` task then answers 501, and the Fix button goes away for every image.
+- Any other failure (network, model error) keeps the Fix button, so the writer can try again.
+
 Set `autoAltText: false` to turn the automatic request off.

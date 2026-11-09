@@ -155,6 +155,11 @@ describe('createInkpilotHandler', () => {
 
     expect((await handler(post({ ...alt, image: { data: 'A'.repeat(400), mediaType: 'image/png' } }))).status).toBe(413);
     expect((await handler(post({ ...alt, image: { data: 'not base64!', mediaType: 'image/png' } }))).status).toBe(400);
+
+    const textOnly = createInkpilotHandler({ model: modelStreaming(['x']), visionModel: false, authorize: 'public' });
+    const unsupported = await textOnly(post(alt));
+    expect(unsupported.status).toBe(501);
+    expect(await unsupported.json()).toMatchObject({ error: { code: 'unsupported' } });
   });
 
   it('aborts the model call when the client cancels the stream', async () => {

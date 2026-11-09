@@ -30,8 +30,20 @@ export interface ImageUploadOptions {
   getLocale: () => string;
 }
 
+/**
+ * Where an explicit alt text request stands for an image. `unsupported` (the endpoint
+ * has no model that reads images) applies to every image; `unreachable` means the
+ * browser couldn't load the image bytes, usually because the host blocks cross-origin reads.
+ */
+export type AltStatus = 'pending' | 'unsupported' | 'unreachable' | 'failed';
+
 export interface ImageUploadStorage {
   uploads: Map<string, UploadEntry>;
+  /** Alt text request state by image `src`. */
+  alt: Map<string, Exclude<AltStatus, 'unsupported'>>;
+  altUnsupported: boolean;
+  /** Bumped on every alt state change, so React selectors can notice it. */
+  altRevision: number;
 }
 
 declare module '@tiptap/core' {
@@ -56,6 +68,13 @@ const nextUploadId = () => `up-${Date.now().toString(36)}-${++uploadCounter}`;
 /** Only put URLs in the document that a page can safely render as an image. */
 function isSafeImageSrc(src: string): boolean {
   return /^(https?:\/\/|\/(?!\/)|data:image\/(png|jpeg|webp|gif|avif);base64,)/i.test(src.trim());
+}
+
+/** Alt text state of the image at `pos`, if a request is running or failed. */
+export function altStatusAt(state: EditorState, storage: ImageUploadStorage, pos: number): AltStatus | undefined {
+  if (storage.altUnsupported) return 'unsupported';
+  const node = state.doc.nodeAt(pos);
+  return node?.type.name === 'image' ? storage.alt.get(String(node.attrs.src ?? '')) : undefined;
 }
 
 /** Images still waiting for their upload, by upload id. */
@@ -103,24 +122,42 @@ function surroundingText(doc: PMNode, pos: number, size = 400): string {
   return doc.textBetween(from, to, '\n', ' ').trim();
 }
 
-/** Request alt text and apply it to the image matching `find`, unless the writer set one meanwhile. */
+/** Record an alt state change and dispatch an empty transaction so the UI re-reads it. */
+function setAltStatus(editor: Editor, storage: ImageUploadStorage, src: string, status: AltStatus | undefined) {
+  if (status === 'unsupported') storage.altUnsupported = true;
+  else if (status) storage.alt.set(src, status);
+  else storage.alt.delete(src);
+  storage.altRevision++;
+  if (!editor.isDestroyed) editor.view.dispatch(editor.state.tr.setMeta(imageUploadKey, 'alt').setMeta('addToHistory', false));
+}
+
+/**
+ * Request alt text and apply it to the image matching `find`, unless the writer set one
+ * meanwhile. Resolves to whether it was applied, or why not.
+ */
 async function requestAlt(
   editor: Editor,
   options: ImageUploadOptions,
+  storage: ImageUploadStorage,
   blob: Blob,
   find: (node: PMNode) => boolean,
   context: string,
-): Promise<boolean> {
+): Promise<'applied' | 'skipped' | 'failed'> {
   const transport = options.getTransport();
   const mediaType = blob.type as AltImageType;
-  if (!transport || !(ALT_IMAGE_TYPES as readonly string[]).includes(mediaType)) return false;
+  if (!transport || !(ALT_IMAGE_TYPES as readonly string[]).includes(mediaType)) return 'skipped';
 
   const dataUrl = await blobToDataUrl(blob);
   const result = await transport.json(
     { v: PROTOCOL_VERSION, task: 'alt', locale: options.getLocale(), image: { data: dataUrl.slice(dataUrl.indexOf(',') + 1), mediaType }, context },
     new AbortController().signal,
   );
-  if (!result.ok || editor.isDestroyed) return false;
+  if (editor.isDestroyed) return 'skipped';
+  if (!result.ok) {
+    // Remember a model that can't read images, so no other image offers the fix.
+    if (result.code === 'unsupported') setAltStatus(editor, storage, '', 'unsupported');
+    return 'failed';
+  }
 
   let target: { pos: number; node: PMNode } | null = null;
   editor.state.doc.descendants((node, pos) => {
@@ -128,13 +165,13 @@ async function requestAlt(
     if (node.type.name === 'image' && find(node)) target = { pos, node };
     return true;
   });
-  if (!target) return false;
+  if (!target) return 'skipped';
   const { pos, node } = target as { pos: number; node: PMNode };
-  if (String(node.attrs.alt ?? '').trim()) return false;
+  if (String(node.attrs.alt ?? '').trim()) return 'skipped';
   editor.view.dispatch(
     editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, alt: result.data.alt.trim() }).setMeta('addToHistory', false),
   );
-  return true;
+  return 'applied';
 }
 
 async function upload(editor: Editor, options: ImageUploadOptions, storage: ImageUploadStorage, id: string, file: File) {
@@ -153,7 +190,8 @@ async function upload(editor: Editor, options: ImageUploadOptions, storage: Imag
     if (config.autoAltText !== false) {
       const pos = findImage(editor.state.doc, (node) => node.attrs.src === uploaded.src);
       const context = pos === null ? '' : surroundingText(editor.state.doc, pos);
-      void requestAlt(editor, options, prepared.file, (node) => node.attrs.src === uploaded.src, context).catch(() => undefined);
+      // Automatic and best effort: only an unsupported model is remembered (in requestAlt).
+      void requestAlt(editor, options, storage, prepared.file, (node) => node.attrs.src === uploaded.src, context).catch(() => undefined);
     }
   } catch (error) {
     if (entry.controller.signal.aborted) return;
@@ -180,7 +218,7 @@ export const ImageUploadExtension = Extension.create<ImageUploadOptions, ImageUp
   },
 
   addStorage() {
-    return { uploads: new Map<string, UploadEntry>() };
+    return { uploads: new Map<string, UploadEntry>(), alt: new Map(), altUnsupported: false, altRevision: 0 };
   },
 
   addGlobalAttributes() {
@@ -233,13 +271,25 @@ export const ImageUploadExtension = Extension.create<ImageUploadOptions, ImageUp
         ({ editor, state, dispatch }) => {
           const node = state.doc.nodeAt(pos);
           if (node?.type.name !== 'image' || !options.getTransport() || String(node.attrs.alt ?? '').trim()) return false;
+          // A failed request may be retried; the others won't change by trying again.
+          const status = altStatusAt(state, storage, pos);
+          if (status && status !== 'failed') return false;
           if (!dispatch) return true;
           const src = String(node.attrs.src ?? '');
           const context = surroundingText(state.doc, pos);
+          // After this command's own transaction, which must not carry the alt meta.
+          queueMicrotask(() => setAltStatus(editor, storage, src, 'pending'));
           void fetch(src)
             .then((response) => (response.ok ? response.blob() : Promise.reject(new Error(`HTTP ${response.status}`))))
-            .then((blob) => requestAlt(editor, options, blob, (candidate) => candidate.attrs.src === src, context))
-            .catch(() => undefined);
+            .then(
+              async (blob) => {
+                const outcome = await requestAlt(editor, options, storage, blob, (candidate) => candidate.attrs.src === src, context);
+                setAltStatus(editor, storage, src, outcome === 'failed' && !storage.altUnsupported ? 'failed' : undefined);
+              },
+              // CORS refusals and HTTP errors both land here.
+              () => setAltStatus(editor, storage, src, 'unreachable'),
+            )
+            .catch(() => setAltStatus(editor, storage, src, 'failed'));
           return true;
         },
     };
