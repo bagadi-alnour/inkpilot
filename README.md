@@ -4,6 +4,13 @@ A React editor where the SEO checks and the AI work together. Inkpilot underline
 
 It's free and MIT licensed. You bring the model and the image storage, and Inkpilot never needs your API keys in the browser.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/proposal-dark.png">
+  <img alt="Fix with AI on a 58-word sentence: the original is struck through, the suggested rewrite follows it, and a bar offers Accept, Reject and Try again." src="docs/screenshots/proposal-light.png">
+</picture>
+
+Try the whole loop locally with the [demo](demo): it runs without an API key.
+
 ```bash
 npm install @inkpilot/editor
 # for the server route:
@@ -113,6 +120,8 @@ npm test               # vitest
 npm run typecheck && npm run lint
 npm run build && npm run check:bundle   # client/server import boundary + gzip budget
 ```
+
+The images in `docs/screenshots/` come from the demo. After a UI change, run `npm run screenshots` in `demo/` and commit the new images.
 
 Point an example at your checkout with `"@inkpilot/editor": "file:../../"` and run `npm run build` after changing the package.
 

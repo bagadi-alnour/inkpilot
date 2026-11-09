@@ -58,6 +58,11 @@ Narrow tasks don't make the endpoint safe on their own. Callers control the arti
 
 ## How proposals are applied
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="screenshots/proposal-dark.png">
+  <img alt="A proposal ready to accept: the original sentence struck through, the rewrite after it, and Accept, Reject and Try again." src="screenshots/proposal-light.png">
+</picture>
+
 1. The selection or issue range is serialized to a restricted HTML subset: paragraphs, headings, lists, bold, italic, underline, strike, code, highlight, color, links.
 2. The model returns the same subset. While it streams, the preview renders through the editor schema, never as raw HTML.
 3. On `done`, the output is parsed in an inert document and validated. The validator rejects any disallowed element, unsafe link, empty output, output much longer than the original, or block structure that doesn't fit the position.
