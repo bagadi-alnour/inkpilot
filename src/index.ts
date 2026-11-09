@@ -43,6 +43,13 @@ export type {
   UploadedImage,
 } from './types';
 
+// Each extension declares its Tiptap commands (`fixIssue`, `cancelUploads`, ...) in its own
+// module. The type bundler keeps those declarations only for modules the entry exports from,
+// so export one type from each. `npm run check:bundle` fails if a command goes missing.
+export type { AltStatus } from './core/extensions/image-upload';
+export type { SEOReportOptions } from './core/extensions/seo-report';
+export type { KeyboardShortcutsOptions } from './core/extensions/keyboard-shortcuts';
+
 // AI transport and wire protocol (pair with `@inkpilot/editor/server`)
 export { createFetchTransport } from './ai/transport';
 export type { InkpilotTransport, FetchTransportOptions } from './ai/transport';
