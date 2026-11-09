@@ -14,7 +14,7 @@
     "@ai-sdk/openai": "^4.0.111",
     "@inkpilot/editor": "file:..",
     "ai": "^7.0.165",
-    "next": "^15.1.0",
+    "next": "^16.4.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zod": "^4.6.7"
