@@ -139,6 +139,33 @@ describe('image uploads', () => {
     expect(images()).toEqual([]);
   });
 
+  it('cancelling stops the uploads and removes their images without reporting an error', async () => {
+    const signals: AbortSignal[] = [];
+    const calls: ((value: UploadedImage) => void)[] = [];
+    const onUploadError = vi.fn();
+    const upload: ImageConfig['upload'] = (_file, { signal }) => {
+      signals.push(signal);
+      return new Promise((resolve) => calls.push(resolve));
+    };
+    setup({ upload, onUploadError, autoAltText: false });
+    editor.commands.insertImageFiles([png('a.png'), png('b.png')]);
+    await flush();
+    expect(editor.can().cancelUploads()).toBe(true);
+
+    editor.commands.cancelUploads();
+    await flush();
+    expect(signals.every((signal) => signal.aborted)).toBe(true);
+    expect(images()).toEqual([]);
+    expect(revoked).toEqual(['blob:test/1', 'blob:test/2']);
+
+    // An uploader that ignores the signal and finishes anyway changes nothing.
+    calls.forEach((resolve) => resolve({ src: 'https://cdn.example.com/late.png' }));
+    await flush();
+    expect(images()).toEqual([]);
+    expect(onUploadError).not.toHaveBeenCalled();
+    expect(editor.can().cancelUploads()).toBe(false);
+  });
+
   it('rejects unusable URLs from the uploader', async () => {
     const { upload, calls } = manualUploader();
     const onUploadError = vi.fn();
@@ -227,6 +254,13 @@ describe('alt text suggestions for existing images', () => {
     await flush();
     expect(statusOf(b)).toBe('unsupported');
     expect(editor.can().suggestAltText(b)).toBe(false);
+  });
+
+  it('is not offered while the image is still uploading', async () => {
+    setup({ upload: manualUploader().upload }, altTransport());
+    editor.commands.insertImageFiles([png()], 0);
+    await flush();
+    expect(editor.can().suggestAltText(imagePositions()[0])).toBe(false);
   });
 
   it('lets a failed request be retried, and clears the failure when it works', async () => {

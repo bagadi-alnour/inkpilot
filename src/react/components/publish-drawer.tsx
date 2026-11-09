@@ -216,9 +216,14 @@ export function PublishDrawer(props: PublishDrawerProps) {
       <div className="ip-drawer-foot">
         {blockedMessage && <p className="ip-drawer-note ip-drawer-note--error" role="alert">{blockedMessage}</p>}
         {uploading > 0 ? (
-          <button type="button" className="ip-btn ip-btn--primary ip-btn--wide" disabled>
-            <span className="ip-spinner" aria-hidden /> {t('publish.uploading', { count: uploading })}
-          </button>
+          <>
+            <button type="button" className="ip-btn ip-btn--primary ip-btn--wide" disabled>
+              <span className="ip-spinner" aria-hidden /> {t('publish.uploading', { count: uploading })}
+            </button>
+            <button type="button" className="ip-btn ip-btn--wide" onClick={() => editor.commands.cancelUploads()}>
+              {t('publish.cancelUploads')}
+            </button>
+          </>
         ) : (
           <button type="button" className="ip-btn ip-btn--primary ip-btn--wide" onClick={onPublish}>
             {t('publish.publish')}
