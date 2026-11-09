@@ -4,6 +4,7 @@ import type { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
 import { useTranslation } from '@inkpilot/i18n';
 import { findIssue } from '../../core/extensions/seo-report';
+import { AltNote } from './alt-note';
 
 interface IssuePopoverProps {
   editor: Editor | null;
@@ -31,10 +32,14 @@ export function IssuePopover({ editor, containerRef, canFix }: IssuePopoverProps
   const [anchor, setAnchor] = useState<Anchor | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  const issue = useEditorState({
+  const { issue } = useEditorState({
     editor,
-    selector: ({ editor: ed }) => (ed && anchor ? (findIssue(ed.state, anchor.id) ?? null) : null),
-  });
+    selector: ({ editor: ed }) => ({
+      issue: ed && anchor ? (findIssue(ed.state, anchor.id) ?? null) : null,
+      // Not read directly: re-renders the alt text note when a request changes state.
+      altRevision: ed?.storage.imageUpload?.altRevision,
+    }),
+  }) ?? { issue: null };
 
   useEffect(() => {
     if (!editor) return;
@@ -85,6 +90,7 @@ export function IssuePopover({ editor, containerRef, canFix }: IssuePopoverProps
       <p>
         <strong>{t(`seo.issue.${issue.code}`)}.</strong> {t(`seo.issue.${issue.code}.detail`, issue.params)}
       </p>
+      {issue.fix === 'ai-alt' && issue.range && <AltNote editor={editor} pos={issue.range.from} />}
       <div className="ip-issue-popover-actions">
         {canFix && editor.can().fixIssue(issue.id) && (
           <button

@@ -84,6 +84,11 @@ export const defaultStrings: TranslationStrings = {
   'seo.score.label': 'Inkpilot checks: {score} of 100',
 
   // Publish panel
+  'alt.pending': 'Writing alt text…',
+  'alt.unsupported': 'The AI model can’t read images. Write this alt text yourself.',
+  'alt.unreachable': 'The browser couldn’t load this image, often because its host blocks cross-origin requests. Write this alt text yourself.',
+  'alt.failed': 'Couldn’t suggest alt text. Try again, or write it yourself.',
+
   'publish.title': 'Review and publish',
   'publish.close': 'Close',
   'publish.scoreOf': 'of 100 on Inkpilot checks',

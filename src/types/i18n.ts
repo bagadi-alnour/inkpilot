@@ -55,6 +55,12 @@ export interface TranslationStrings extends IssueStrings {
   'seo.issue.ignore': string;
   'seo.score.label': string;
 
+  // Alt text suggestions (see `AltStatus`)
+  'alt.pending': string;
+  'alt.unsupported': string;
+  'alt.unreachable': string;
+  'alt.failed': string;
+
   // Publish panel
   'publish.title': string;
   'publish.close': string;

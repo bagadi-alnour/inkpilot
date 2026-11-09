@@ -131,6 +131,8 @@ export type ProtocolErrorCode =
   | 'unauthorized'
   | 'too-large'
   | 'method-not-allowed'
+  /** The endpoint can't do this task, e.g. alt text without a model that reads images (501). */
+  | 'unsupported'
   | 'internal';
 
 /** JSON body of every non-2xx response. */
