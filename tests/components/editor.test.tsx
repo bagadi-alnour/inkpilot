@@ -76,6 +76,25 @@ describe('Editor', () => {
     vi.unstubAllGlobals();
   });
 
+  it('keeps the issue popover open while the pointer moves onto it', async () => {
+    const { container, editor } = await renderEditor({
+      content: { html: `<h1>How we cut our Next.js build time in half</h1><p>${LONG_PARAGRAPH}</p>` },
+      ai: { endpoint: '/api/inkpilot' },
+    });
+    const underline = await waitFor(() => container.querySelector('[data-ip-issue]')!, { timeout: 2000 });
+    fireEvent.mouseOver(underline);
+    const popover = screen.getByRole('dialog');
+
+    // The browser's order when the pointer crosses from the text onto the popover: React's
+    // onMouseEnter (dispatched from `mouseout`) runs before the editor's `mouseleave`.
+    fireEvent.mouseOver(editor.view.dom.querySelector('p')!);
+    fireEvent.mouseEnter(popover);
+    editor.view.dom.dispatchEvent(new MouseEvent('mouseleave'));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 400)));
+
+    expect(screen.getByRole('button', { name: 'Fix with AI' })).toBeDefined();
+  });
+
   it('hands the editor to onReady, whose requestPublish opens the publish panel', async () => {
     const onReady = vi.fn<(editor: TiptapEditor) => void>();
     const { editor } = await renderEditor({ onReady });
