@@ -1,0 +1,95 @@
+/* Guided loop shell (design option C). The editor brings its own theme; these tokens frame it. */
+.demo {
+  --page: #020617;
+  --fg: #ffffff;
+  --line: #475569;
+  --mark: #2b3bd6;
+  --step-on: #ffffff;
+  --step-on-fg: #0f172a;
+  color-scheme: dark;
+}
+.demo[data-theme='light'] {
+  --page: #ffffff;
+  --fg: #0f172a;
+  --line: #94a3b8;
+  --step-on: #0f172a;
+  --step-on-fg: #ffffff;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Arabic', sans-serif; }
+
+.demo {
+  display: grid;
+  grid-template-columns: 330px minmax(0, 1fr);
+  min-height: 100vh;
+  background: var(--page);
+  color: var(--fg);
+  line-height: 1.6;
+}
+.demo-steps :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.demo a { color: inherit; font-weight: 600; }
+
+.demo-steps {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 26px;
+  border-inline-end: 1px solid var(--line);
+  overflow-y: auto;
+}
+.demo-mark { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; }
+.demo-mark span { width: 14px; height: 14px; border-radius: 3px; background: var(--mark); }
+.demo-steps h1 { font-size: 22px; line-height: 1.25; margin: 14px 0 6px; }
+.demo-intro { margin: 0 0 20px; font-size: 14px; }
+
+.demo-step-list { list-style: none; margin: 0; padding: 0; }
+.demo-step {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: 12px;
+  width: calc(100% + 20px);
+  margin-inline: -10px;
+  padding: 12px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.demo-step:disabled { cursor: default; }
+.demo-step:disabled:not([aria-current]) .demo-step-n { border-style: dashed; }
+.demo-step-n {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 800;
+}
+.demo-step strong { display: block; font-size: 15px; }
+.demo-step-detail { display: block; font-size: 14px; line-height: 1.5; }
+.demo-step[aria-current] { background: var(--step-on); color: var(--step-on-fg); }
+.demo-step[aria-current] .demo-step-n { background: var(--step-on-fg); color: var(--step-on); border-color: var(--step-on-fg); }
+
+.demo-published { margin: 16px 0 0; padding: 10px 12px; border: 1px solid var(--fg); border-radius: 8px; font-size: 14px; font-weight: 600; }
+.demo-foot { margin-top: auto; padding-top: 20px; font-size: 13px; }
+.demo-foot p { margin: 0 0 6px; }
+.demo-switches { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+
+.demo-main { padding: 20px; min-width: 0; }
+.demo-main .inkpilot-editor { min-height: calc(100vh - 40px); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+
+@media (max-width: 900px) {
+  .demo { grid-template-columns: minmax(0, 1fr); }
+  .demo-steps { position: static; height: auto; border-inline-end: 0; border-bottom: 1px solid var(--line); padding: 20px 16px; }
+  .demo-main { padding: 16px; }
+}

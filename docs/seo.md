@@ -4,6 +4,11 @@
 
 One engine (`analyzeDocument`) runs on the document. It is pure and synchronous. While you write it runs 400 ms after typing stops, and it runs once more on the exact content being published.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="screenshots/issue-dark.png">
+  <img alt="A long sentence underlined with a wavy line, and a popover saying it has 58 words, with Fix with AI and Ignore." src="screenshots/issue-light.png">
+</picture>
+
 | Code | Severity | Range | Fix |
 |---|---|---|---|
 | `missing-title` | error | | add an H1 or SEO title |
@@ -63,6 +68,11 @@ editor.commands.refreshReport();        // after changing inputs outside the edi
 ```
 
 ## Publishing
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="screenshots/publish-panel-dark.png">
+  <img alt="The Review and publish panel: score 97, one check (no description) with Suggest, the SEO title, two suggested descriptions, the slug and a search preview." src="screenshots/publish-panel-light.png" width="380">
+</picture>
 
 `onPublish({ content, meta, report })`:
 
