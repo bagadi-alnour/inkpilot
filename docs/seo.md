@@ -1,93 +1,73 @@
-# SEO features
+# SEO
 
-## Overview
+## The checks
 
-SEO is split into two layers: **light signals** while editing (fast, local rules) and a **pre-publish panel** with full analysis (readability, keywords when configured, SERP-style preview). Light signals do not call AI. The full panel can optionally enrich suggestions with AI when an `AIConfig` is available.
+One engine (`analyzeDocument`) runs on the document. It is pure and synchronous. While you write it runs 400 ms after typing stops, and it runs once more on the exact content being published.
 
-## Light signals (no AI)
+| Code | Severity | Range | Fix |
+|---|---|---|---|
+| `missing-title` | error | | add an H1 or SEO title |
+| `multiple-h1` | warning | extra H1 | manual |
+| `heading-skip` | warning | heading | manual |
+| `title-length` | info | H1 | AI title suggestions |
+| `generic-title` | warning | H1 | AI title suggestions |
+| `description-missing`, `description-length` | info | | AI description suggestions |
+| `alt-missing` | warning | image | AI alt text |
+| `alt-length` | info | image | AI alt text |
+| `inline-image` | info | image | configure uploads |
+| `long-sentence` | warning | paragraph | Fix with AI |
+| `dense-paragraph` | info | paragraph | Fix with AI (may split it) |
+| `hard-to-read` | info | | English only |
+| `keyword-missing` | warning | first paragraph | Fix with AI |
+| `keyword-not-in-intro` | info | first paragraph | Fix with AI |
+| `keyword-not-in-title` | info | H1 | AI title suggestions |
+| `keyword-not-in-headings` | info | | manual |
+| `keyword-density` | warning if too high | | manual |
 
-When `seo.lightSignals` is not `false`, the editor runs deterministic checks on the document:
+Sentences and words are split with `Intl.Segmenter` for the content language (`seo.locale`, else `locale`). It treats abbreviations like "Dr." as sentence ends. Keywords match whole words in any script, so "react" doesn't match "reactive". Description checks only run when the publish panel is on, because the panel is where you write the description.
 
-| Signal type           | What it catches |
-| --------------------- | ---------------- |
-| `missing-h1`          | Content exists but no level-1 heading |
-| `weak-title`          | H1 text shorter than 10 or longer than 70 characters |
-| `heading-hierarchy`   | A heading skips a level (e.g. H1 → H3) |
-| `empty-alt`           | Image nodes without non-empty `alt` |
+## Thresholds are guidance
 
-These are computed in the editor extension from the ProseMirror document only—no network calls.
-
-## Pre-publish panel
-
-When `seo.prePublishPanel` is not `false`, publishing opens a review UI with:
-
-- Aggregated **SEO score** (0–100)
-- **Issues** and **suggestions**
-- **Readability** metrics (e.g. Flesch-style scoring via local analysis)
-- **Keyword** analysis when `targetKeywords` is set
-- **SERP preview** (title/description length awareness)
-
-If you pass **AI** config alongside SEO, the analyzer may add optional AI-powered title and meta description suggestions; core scoring and issues remain rule-based.
-
-## `SEOConfig`
-
-```typescript
-import type { SEOConfig } from "@writeflow/editor";
-
-const seo: SEOConfig = {
-  lightSignals: true, // default-on; set false to disable inline signals
-  prePublishPanel: true, // default-on; set false to skip the modal flow
-  targetKeywords: ["next.js", "editor"],
-  locale: "en-US",
-  onAnalysis: (analysis) => {
-    console.log("Score:", analysis.score);
-  },
+```ts
+const DEFAULT_RULE_OPTIONS = {
+  titleLength: { min: 30, max: 60 },
+  descriptionLength: { min: 120, max: 160 },
+  altLength: { min: 5, max: 125 },
+  maxSentenceWords: 25,
+  maxParagraphSentences: 5,
+  minReadingEase: 50,
+  keywordDensity: { min: 0.005, max: 0.03 },
 };
+
+<Editor seo={{ rules: { maxSentenceWords: 30, titleLength: { min: 20, max: 70 } } }} />
 ```
 
-## `SEOAnalysis`
+Search engines don't publish fixed title or description limits. What shows depends on pixel width and device. That's why length findings are `info`, and the search preview in the panel says it is approximate.
 
-```typescript
-interface SEOAnalysis {
-  score: number; // 0–100
-  issues: SEOIssue[];
-  suggestions: SEOSuggestion[];
-}
+## The score
+
+`100 - penalties`: error 15, warning 8, info 3. One code can cost at most 24 points, so ten long sentences don't sink the score by themselves. Read the score as "how well this meets Inkpilot's checks". It doesn't predict ranking.
+
+## Fixing issues
+
+Hover an underlined issue to see what's wrong. Fix with AI starts a rewrite of that range with an issue-specific instruction, for example "split the long sentences, keep every fact". Ignore hides the issue until its text changes.
+
+The publish panel lists every issue with the action that fits it: Fix (AI rewrite or alt text), Suggest (title or description ideas), or Show (selects the text).
+
+From code:
+
+```ts
+editor.commands.fixIssue(issue.id);     // false if it can't be fixed with AI
+editor.commands.ignoreIssue(issue.id);
+editor.commands.refreshReport();        // after changing inputs outside the editor
 ```
 
-Use `onPublish` on `<Editor />` to receive the latest `SEOAnalysis` when the user confirms publish from the panel.
+## Publishing
 
-## `useSEOAnalysis`
+`onPublish({ content, meta, report })`:
 
-For custom UIs, run analysis against the same Tiptap `Editor` instance. When you also use `useWriteFlowEditor`, pass its `signals` into the fourth argument so the hook matches the built-in editor behavior.
+- `content` and `report` come from the same document state. If you edit and publish within the debounce window, the report still matches.
+- `meta` is `{ title, description, slug }`. An empty `title` means the H1 is the title. The slug follows the title until it's edited.
+- Publishing is refused while images upload or if a local preview is left.
 
-```tsx
-import { useWriteFlowEditor, useSEOAnalysis } from "@writeflow/editor";
-import type { SEOConfig, AIConfig } from "@writeflow/editor";
-
-const seo: SEOConfig = { targetKeywords: ["documentation"] };
-const ai: AIConfig | undefined = undefined; // or pass AIConfig for optional AI title/meta suggestions
-
-const { editor, signals } = useWriteFlowEditor({ seo });
-
-const { analysis, isAnalyzing, score, runAnalysis } = useSEOAnalysis(
-  editor,
-  seo,
-  ai,
-  signals,
-);
-
-await runAnalysis();
-console.log(analysis?.score, analysis?.issues, analysis?.suggestions);
-```
-
-- `runAnalysis()` executes `analyzeContent` (readability, headings, keywords, optional AI suggestions).
-
-## Keyboard shortcut
-
-The editor registers **Mod+Shift+P** (⌘⇧P on macOS, Ctrl+Shift+P on Windows/Linux) to open the pre-publish flow when `prePublishPanel` is enabled—same as the “publish” path that runs analysis.
-
-## Notes
-
-- Set `seo.locale` to align analysis copy and numeric formatting with your app locale where applicable.
-- Full analysis is heavier than light signals; trigger it at publish or on explicit user action rather than on every keystroke.
+Use `defaultMeta` to load saved metadata and `onMetaChange` to keep it in your state.

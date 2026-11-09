@@ -1,81 +1,45 @@
-# Hooks API
+# Hooks
 
-For developers who need granular control beyond the `<Editor>` component.
+For building your own UI around the editor. Inside `<Editor />` you rarely need them.
 
-## useWriteFlowEditor
+## `useInkpilotEditor(options)`
 
-```typescript
-import { useWriteFlowEditor } from "@writeflow/editor";
+Creates the editor with Inkpilot's extensions. It takes the same options as `<Editor />` plus `transport`. It returns `{ editor, content, setContent, isEmpty }`. Render the editor with Tiptap's `<EditorContent editor={editor} />`.
 
-function CustomEditor() {
-  const { editor, content, signals, setContent, isEmpty } = useWriteFlowEditor({
-    ai: { provider: "openai", apiKey: "..." },
-    theme: { mode: "dark" },
-    placeholder: "Start writing...",
-  });
+## `useAIRewrite(editor, defaults?)`
 
-  return <EditorContent editor={editor} />;
-}
+```ts
+const { session, rewrite, accept, reject, retry } = useAIRewrite(editor, { tone: 'formal' });
+
+rewrite({ intent: 'simplify' });   // rewrite the current selection
+session?.status;                   // 'streaming' | 'ready' | 'error'
+session?.error?.message;
 ```
 
-## useAIRewrite
+The proposal preview and its Accept / Reject bar render inside the document, so these hooks are for extra controls such as a toolbar button.
 
-```typescript
-import { useAIRewrite } from "@writeflow/editor";
+## `useSEOReport(editor)`
 
-const { rewrite, isRewriting, result, diff, accept, reject, abort } = useAIRewrite(editor, {
-  provider: "openai",
-  apiKey: "...",
-});
+The live report (`{ issues, score }`). It updates shortly after typing stops.
 
-// Trigger rewrite with custom options
-rewrite({ tone: "formal", intent: "simplify" });
-
-// Accept or reject the result
-accept(); // applies rewritten text
-reject(); // restores original
+```tsx
+const report = useSEOReport(editor);
+return <span>{report.score} · {report.issues.length} to review</span>;
 ```
 
-## useSEOAnalysis
+## `useTheme(config, containerRef)`
 
-```typescript
-import { useSEOAnalysis } from "@writeflow/editor";
+Resolves `mode: 'auto'` and the preset into CSS variables on the container. `<Editor />` uses it internally.
 
-const { signals, analysis, isAnalyzing, score, runAnalysis } = useSEOAnalysis(
-  editor,
-  { lightSignals: true, targetKeywords: ["react", "editor"] },
-  aiConfig
-);
+## Commands
 
-// Manually trigger full analysis
-await runAnalysis();
-console.log(analysis?.score, analysis?.issues);
-```
+The extensions add Tiptap commands you can call from anywhere:
 
-## useStorage
-
-```typescript
-import { useStorage } from "@writeflow/editor";
-
-const { upload, isUploading, progress, lastUpload, error } = useStorage({
-  provider: "s3",
-  bucket: "my-uploads",
-  presignedUrlEndpoint: "/api/upload",
-});
-
-const result = await upload(file);
-```
-
-## useTheme
-
-```typescript
-import { useTheme } from "@writeflow/editor";
-
-const { theme, mode, setMode, applyPreset } = useTheme(
-  { mode: "auto" },
-  containerRef
-);
-
-setMode("dark");
-applyPreset("editorial");
-```
+| Command | |
+|---|---|
+| `rewriteSelection({ tone, intent, preserveMeaning? })` | rewrite the selection |
+| `startRewrite({ from, to, source })` | rewrite a range |
+| `acceptRewrite()`, `rejectRewrite()`, `retryRewrite()` | act on the open proposal |
+| `fixIssue(id)`, `ignoreIssue(id)`, `refreshReport()` | SEO issues |
+| `insertImageFiles(files, pos?)` | insert and upload images |
+| `suggestAltText(pos)` | AI alt text for the image at `pos` |

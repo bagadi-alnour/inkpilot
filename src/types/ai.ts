@@ -1,65 +1,48 @@
-export type AIProvider = 'openai' | 'anthropic';
-export type AITone = 'formal' | 'casual' | 'persuasive';
-export type AIIntent = 'simplify' | 'expand' | 'clarify';
+import type { InkpilotTransport } from '../ai/transport';
+import type { Intent, Tone } from '../protocol';
 
-export interface AIConfig {
-  provider: AIProvider;
-  apiKey: string;
-  model?: string;
-  baseURL?: string;
+export type AITone = Tone;
+export type AIIntent = Intent;
+
+/** Writing defaults shared by every way of connecting a model. */
+export interface AIBehaviour {
   defaultTone?: AITone;
   defaultIntent?: AIIntent;
   preserveMeaning?: boolean;
+  /** Called when the writer accepts or rejects a finished proposal. */
   onRewrite?: (result: RewriteResult) => void;
 }
 
+/** Recommended: POST to your `createInkpilotHandler` route. Keys stay on your server. */
+export interface AIEndpointConfig extends AIBehaviour {
+  endpoint: string;
+  headers?: HeadersInit | (() => HeadersInit);
+  transport?: never;
+}
+
+/** Bring your own transport (another backend, or tests). */
+export interface AITransportConfig extends AIBehaviour {
+  transport: InkpilotTransport;
+  endpoint?: never;
+}
+
+export type AIConfig = AIEndpointConfig | AITransportConfig;
+
 export interface RewriteResult {
+  /** Plain text before the change. */
   original: string;
+  /** Plain text of the proposal. */
   rewritten: string;
-  tone: AITone;
-  intent: AIIntent;
   accepted: boolean;
+  /** Set for selection rewrites. */
+  tone?: AITone;
+  intent?: AIIntent;
+  /** Set for SEO fixes. */
+  issueCode?: string;
 }
 
 export interface RewriteOptions {
   tone?: AITone;
   intent?: AIIntent;
   preserveMeaning?: boolean;
-}
-
-export interface RewriteParams {
-  selectedText: string;
-  surroundingBefore: string;
-  surroundingAfter: string;
-  tone: AITone;
-  intent: AIIntent;
-  preserveMeaning: boolean;
-  signal?: AbortSignal;
-}
-
-export interface RestructureParams {
-  fullContent: string;
-  headingStructure: HeadingNode[];
-  instructions?: string;
-  signal?: AbortSignal;
-}
-
-export interface HeadingNode {
-  level: number;
-  text: string;
-  from: number;
-  to: number;
-  children: HeadingNode[];
-}
-
-export interface DiffSegment {
-  type: 'equal' | 'insert' | 'delete';
-  text: string;
-}
-
-export interface AIProviderAdapter {
-  rewrite(params: RewriteParams): AsyncIterable<string>;
-  restructure(params: RestructureParams): AsyncIterable<string>;
-  suggestTitle(content: string): Promise<string[]>;
-  suggestMeta(content: string): Promise<string>;
 }

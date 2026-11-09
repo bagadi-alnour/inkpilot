@@ -7,7 +7,7 @@ Themes combine a **mode** (light, dark, or auto), an optional **preset** palette
 ## `ThemeConfig`
 
 ```typescript
-import type { ThemeConfig, ThemePreset } from "@writeflow/editor";
+import type { ThemeConfig, ThemePreset } from "@inkpilot/editor";
 
 const theme: ThemeConfig = {
   mode: "auto", // "light" | "dark" | "auto"
@@ -66,7 +66,7 @@ This matches common app shells (e.g. `class="dark"` on `<html>`).
 ## Custom theme example
 
 ```tsx
-import { Editor } from "@writeflow/editor";
+import { Editor } from "@inkpilot/editor";
 
 export function ThemedEditor() {
   return (
@@ -90,7 +90,7 @@ For custom shells, drive the same resolution logic:
 
 ```tsx
 import { useRef } from "react";
-import { useTheme } from "@writeflow/editor";
+import { useTheme } from "@inkpilot/editor";
 
 const containerRef = useRef<HTMLDivElement>(null);
 

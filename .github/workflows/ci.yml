@@ -11,7 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20, 22]
+        # AI SDK 7 (the server entry's peer) requires Node 22+.
+        node-version: [22, 24]
 
     steps:
       - uses: actions/checkout@v4
@@ -35,16 +36,11 @@ jobs:
         run: npx vitest run
 
       - name: Build
-        run: npx tsup
+        run: npm run build
 
-      - name: Check bundle size
-        run: |
-          SIZE=$(wc -c < dist/index.js)
-          echo "ESM bundle size: $SIZE bytes"
-          if [ "$SIZE" -gt 200000 ]; then
-            echo "Bundle size exceeds 200KB limit!"
-            exit 1
-          fi
+      # Client/server import boundary and the client gzip budget.
+      - name: Check bundle
+        run: npm run check:bundle
 
   # The root tsconfig excludes `examples/`, so example code is only type checked here.
   typecheck-examples:
@@ -64,7 +60,7 @@ jobs:
 
       # Examples depend on the package via `file:../../`, so its dist types must exist first.
       - name: Build package
-        run: npx tsup
+        run: npm run build
 
       - name: Type check examples
         run: |

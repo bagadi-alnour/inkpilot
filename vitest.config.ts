@@ -19,7 +19,6 @@ export default defineConfig({
       '@inkpilot/core': resolve(__dirname, 'src/core'),
       '@inkpilot/ai': resolve(__dirname, 'src/ai'),
       '@inkpilot/seo': resolve(__dirname, 'src/seo'),
-      '@inkpilot/storage': resolve(__dirname, 'src/storage'),
       '@inkpilot/image': resolve(__dirname, 'src/image'),
       '@inkpilot/theme': resolve(__dirname, 'src/theme'),
       '@inkpilot/i18n': resolve(__dirname, 'src/i18n'),

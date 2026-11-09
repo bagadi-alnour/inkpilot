@@ -1,26 +1,29 @@
-import StarterKit from '@tiptap/starter-kit';
-import Placeholder from '@tiptap/extension-placeholder';
-import Image from '@tiptap/extension-image';
-import Link from '@tiptap/extension-link';
-import Highlight from '@tiptap/extension-highlight';
-import Underline from '@tiptap/extension-underline';
-import TextAlign from '@tiptap/extension-text-align';
-import TextStyle from '@tiptap/extension-text-style';
-import Color from '@tiptap/extension-color';
-import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
-import { common, createLowlight } from 'lowlight';
-import type { Extensions } from '@tiptap/core';
-
-const lowlight = createLowlight(common);
+import { StarterKit } from '@tiptap/starter-kit';
+import { Placeholder } from '@tiptap/extensions';
+import { Image } from '@tiptap/extension-image';
+import { Highlight } from '@tiptap/extension-highlight';
+import { TextAlign } from '@tiptap/extension-text-align';
+import { TextStyle, Color } from '@tiptap/extension-text-style';
+import type { Extensions, Node } from '@tiptap/core';
 
 export interface InkpilotKitOptions {
   placeholder?: string;
+  /** Replaces StarterKit's plain code block; see `EditorConfig.codeBlock`. */
+  codeBlock?: Node;
 }
 
 export function createInkpilotKit(options: InkpilotKitOptions = {}): Extensions {
   return [
+    // StarterKit v3 bundles Link, Underline and a plain code block.
     StarterKit.configure({
-      codeBlock: false,
+      codeBlock: options.codeBlock ? false : undefined,
+      link: {
+        openOnClick: false,
+        autolink: true,
+        HTMLAttributes: {
+          rel: 'noopener noreferrer',
+        },
+      },
     }),
     Placeholder.configure({
       placeholder: options.placeholder ?? 'Start writing...',
@@ -29,24 +32,14 @@ export function createInkpilotKit(options: InkpilotKitOptions = {}): Extensions 
       inline: false,
       allowBase64: true,
     }),
-    Link.configure({
-      openOnClick: false,
-      autolink: true,
-      HTMLAttributes: {
-        rel: 'noopener noreferrer',
-      },
-    }),
     Highlight.configure({
       multicolor: true,
     }),
-    Underline,
     TextAlign.configure({
       types: ['heading', 'paragraph'],
     }),
     TextStyle,
     Color,
-    CodeBlockLowlight.configure({
-      lowlight,
-    }),
+    ...(options.codeBlock ? [options.codeBlock] : []),
   ];
 }

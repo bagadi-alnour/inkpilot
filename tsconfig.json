@@ -25,8 +25,6 @@
       "@inkpilot/ai/*": ["./src/ai/*"],
       "@inkpilot/seo": ["./src/seo"],
       "@inkpilot/seo/*": ["./src/seo/*"],
-      "@inkpilot/storage": ["./src/storage"],
-      "@inkpilot/storage/*": ["./src/storage/*"],
       "@inkpilot/image": ["./src/image"],
       "@inkpilot/image/*": ["./src/image/*"],
       "@inkpilot/theme": ["./src/theme"],

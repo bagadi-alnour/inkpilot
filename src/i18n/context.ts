@@ -1,10 +1,11 @@
 import { createContext, useContext } from 'react';
-import type { TranslationStrings, TranslationKey } from '@inkpilot/types';
+import type { TranslationStrings, TranslationKey, TranslationParams } from '@inkpilot/types';
 import { defaultStrings } from './strings';
 
 export interface I18nContextValue {
   locale: string;
-  t: (key: TranslationKey) => string;
+  /** Translate `key`, filling `{name}` placeholders from `params`. */
+  t: (key: TranslationKey, params?: TranslationParams) => string;
   strings: TranslationStrings;
 }
 
@@ -17,7 +18,11 @@ function createI18nValue(
   return {
     locale,
     strings,
-    t: (key: TranslationKey) => strings[key] ?? key,
+    t: (key: TranslationKey, params?: TranslationParams) => {
+      const template = strings[key] ?? key;
+      if (!params) return template;
+      return template.replace(/\{(\w+)\}/g, (match, name: string) => (name in params ? String(params[name]) : match));
+    },
   };
 }
 

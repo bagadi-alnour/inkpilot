@@ -1,121 +1,81 @@
-# AI provider setup
+# AI
 
-## Overview
+The editor talks to one endpoint you own. `createInkpilotHandler` from `@inkpilot/editor/server` implements it on top of any AI SDK model.
 
-`@writeflow/editor` powers inline rewriting with the [Vercel AI SDK](https://sdk.vercel.ai/) (`ai`, `@ai-sdk/openai`, `@ai-sdk/anthropic`). You choose a provider, pass an API key, and optionally tune model, tone, intent, and meaning preservation. Rewrites stream into the UI; users accept or reject the diff.
+## The handler
 
-## Supported providers
+```ts
+import { createInkpilotHandler } from '@inkpilot/editor/server';
 
-| Provider   | `AIConfig.provider` | Default model              |
-| ---------- | ------------------- | -------------------------- |
-| OpenAI     | `"openai"`          | `gpt-4o-mini`              |
-| Anthropic  | `"anthropic"`       | `claude-sonnet-4-20250514` |
-
-Override the default with `model`. Use `baseURL` for proxies or compatible endpoints.
-
-## `AIConfig`
-
-```typescript
-import type { AIConfig } from "@writeflow/editor";
-
-const ai: AIConfig = {
-  provider: "openai", // or "anthropic"
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_KEY!,
-  model: "gpt-4o-mini", // optional; provider defaults apply when omitted
-  baseURL: undefined, // optional custom API base URL
-  defaultTone: "formal", // "formal" | "casual" | "persuasive"
-  defaultIntent: "clarify", // "simplify" | "expand" | "clarify"
-  preserveMeaning: true, // steer rewrite toward same factual content
-  onRewrite: (result) => {
-    // optional: fired when a rewrite completes
+export const POST = createInkpilotHandler({
+  model,                          // any AI SDK LanguageModel
+  visionModel,                    // optional, for alt text; defaults to `model`
+  authorize: (request) => ...,    // required; 'public' for demos only
+  limits: {
+    maxInputChars: 20_000,        // content + context per request
+    maxImageBytes: 5 * 1024 * 1024,
+    maxOutputTokens: { fix: 2000, rewrite: 2000, titles: 400, descriptions: 600, alt: 200 },
   },
-};
+  onError: (error) => log(error), // model and handler errors; never sent to the client
+});
 ```
 
-Pass `ai` to `<Editor />` or to `useAIRewrite` (see below).
+It takes a Web `Request` and returns a `Response`, so it runs in Next.js route handlers, Pages Router edge routes, Hono, Bun and Remix. For a plain Node server, convert the request (see `examples/react-basic/server/inkpilot-plugin.ts`).
 
-## Prompt behavior
+## Tasks
 
-Built-in prompts combine your selection with surrounding context and map **tone** and **intent** to fixed instruction text (professional voice, simplification, etc.). There is no `AIConfig` field for arbitrary prompt strings; behavior is controlled through `defaultTone`, `defaultIntent`, `preserveMeaning`, and per-invocation options on the hook. For enterprise-only wording or guardrails, keep sensitive logic on the server and call your own API from a route or action, then feed results into the document outside the default flow if needed.
+| Task | Sends | Gets |
+|---|---|---|
+| `fix` | issue code + params, content, context | NDJSON stream |
+| `rewrite` | tone, intent, content, context | NDJSON stream |
+| `titles` | title, headings, excerpt, keywords | `{ titles: string[] }` |
+| `descriptions` | same | `{ descriptions: string[] }` |
+| `alt` | image bytes (base64), surrounding text | `{ alt: string }` |
+
+The client never sends prompt text. Prompts are in `src/server/prompts.ts`. The model is told to treat the article as content to edit, not as instructions.
+
+### Streaming
+
+Streams are newline-delimited JSON:
+
+```ts
+type StreamEvent =
+  | { type: 'delta'; text: string }
+  | { type: 'done'; finishReason: 'stop' }
+  | { type: 'error'; code: 'truncated' | 'model-error' | 'aborted' | ...; message: string };
+```
+
+A proposal can be accepted only after `done`. If the model hits its token limit, the stream ends with `error: truncated`. If the connection closes without a terminal event, the client marks the proposal `incomplete`. Errors before streaming starts (bad body, auth, size) are JSON `{ error: { code, message } }` with an HTTP status.
 
 ## Security
 
-- **Never ship provider API keys in client bundles in production.** Anything in browser JavaScript is visible.
-- Prefer **server-side** execution: Route Handlers, Server Actions, or a backend that holds the secret and streams or returns text.
-- If you must pass a key to the bundled editor in development only, use framework env vars and restrict production builds so keys are not embedded.
+Narrow tasks don't make the endpoint safe on their own. Callers control the article text, and a script can call the route in a loop.
 
-## Environment variables
+- Always pass a real `authorize`.
+- Rate-limit the route at your host.
+- Keep the size limits. Lower them if your articles are short.
+- When the client cancels (Stop, Esc, a new rewrite), the model call is aborted, so you don't pay for output nobody sees.
 
-Patterns (names are conventions—wire them to `AIConfig.apiKey` in your app):
+## How proposals are applied
 
-**Vite**
+1. The selection or issue range is serialized to a restricted HTML subset: paragraphs, headings, lists, bold, italic, underline, strike, code, highlight, color, links.
+2. The model returns the same subset. While it streams, the preview renders through the editor schema, never as raw HTML.
+3. On `done`, the output is parsed in an inert document and validated. The validator rejects any disallowed element, unsafe link, empty output, output much longer than the original, or block structure that doesn't fit the position.
+4. Accept replaces the range in one transaction that is its own undo step. Text outside the range is untouched.
 
-```bash
-# .env
-VITE_OPENAI_API_KEY=sk-...
-VITE_ANTHROPIC_API_KEY=sk-ant-...
-```
+Selections the round trip can't represent losslessly, like code blocks or partial list structure, are refused with a reason instead of being rewritten.
 
-```typescript
-const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-```
+## Custom transports
 
-**Next.js**
+To use another backend, implement `InkpilotTransport`:
 
-```bash
-# .env.local — only NEXT_PUBLIC_* is exposed to the browser (still avoid in prod for real secrets)
-NEXT_PUBLIC_OPENAI_KEY=sk-...
-```
-
-```typescript
-const apiKey = process.env.NEXT_PUBLIC_OPENAI_KEY;
-```
-
-For production, omit `NEXT_PUBLIC_` from secrets and resolve the key only in server code.
-
-## `useAIRewrite`
-
-Use the headless hook when you build your own toolbar or embed Tiptap yourself.
-
-```tsx
-import { useEditor, EditorContent } from "@tiptap/react";
-import { useAIRewrite } from "@writeflow/editor";
-import type { AIConfig } from "@writeflow/editor";
-
-const ai: AIConfig = {
-  provider: "openai",
-  apiKey: "...", // server-provided or dev-only
+```ts
+const transport: InkpilotTransport = {
+  async *stream(request, signal) { /* yield StreamEvents, end with done or error */ },
+  async json(request, signal) { /* return { ok: true, data } or { ok: false, code, message } */ },
 };
 
-function CustomSurface({ editor }: { editor: ReturnType<typeof useEditor> }) {
-  const aiRewrite = useAIRewrite(editor, ai);
-
-  return (
-    <>
-      <button
-        type="button"
-        disabled={!editor || aiRewrite.isRewriting}
-        onClick={() =>
-          aiRewrite.rewrite({
-            tone: "casual",
-            intent: "simplify",
-            preserveMeaning: true,
-          })
-        }
-      >
-        Rewrite selection
-      </button>
-      {/* Panel UI: aiRewrite.diff, aiRewrite.streamedText, aiRewrite.result */}
-      <button type="button" onClick={aiRewrite.accept}>Accept</button>
-      <button type="button" onClick={aiRewrite.reject}>Reject</button>
-    </>
-  );
-}
+<Editor ai={{ transport }} />
 ```
 
-The hook also exposes **live rewrite** helpers (`liveRewrite`, `revert`, `isLive`) used by the built-in floating toolbar for streaming replacements as tokens arrive.
-
-## Notes
-
-- `createAIProvider(config)` is exported for advanced composition; typical apps only pass `AIConfig` into `<Editor />` or `useAIRewrite`.
-- Rewrites use `streamText` from the AI SDK with bounded `maxTokens` and temperature per adapter implementation.
+`createFetchTransport({ endpoint, headers, fetch })` is the default and a reference implementation.

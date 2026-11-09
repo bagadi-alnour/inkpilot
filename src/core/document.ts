@@ -1,10 +1,11 @@
 import type { Editor } from '@tiptap/core';
 import type { EditorContent } from '@inkpilot/types';
-import { htmlToMarkdown, htmlToText, countWords, estimateReadingTime } from './serializers';
+import { htmlToMarkdown, countWords, estimateReadingTime } from './serializers';
 
 export function getContent(editor: Editor): EditorContent {
   const html = editor.getHTML();
-  const text = htmlToText(html);
+  // From the document, not the HTML: textContent would glue blocks together ("endStart").
+  const text = editor.getText({ blockSeparator: '\n\n' });
   const wordCount = countWords(text);
 
   return {
