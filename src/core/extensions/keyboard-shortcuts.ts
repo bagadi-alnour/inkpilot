@@ -17,11 +17,12 @@ export const KeyboardShortcutsExtension = Extension.create<KeyboardShortcutsOpti
 
   addKeyboardShortcuts() {
     return {
-      'Mod-Shift-r': () => {
+      // Mod-Shift-R / P are browser reload and private window; Alt avoids both.
+      'Mod-Alt-r': () => {
         this.options.onRewrite?.();
         return true;
       },
-      'Mod-Shift-p': () => {
+      'Mod-Alt-p': () => {
         this.options.onPublish?.();
         return true;
       },

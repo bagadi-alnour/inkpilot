@@ -1,161 +1,96 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as React from 'react';
-import { act, render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { Editor as TiptapEditor } from '@tiptap/core';
 import { Editor } from '../../src/react/editor';
+import type { EditorProps } from '../../src/react/editor';
+import type { PublishMeta, PublishPayload } from '../../src/types/editor';
+import { flush, LONG_PARAGRAPH } from '../helpers/editor';
 
-const { mockEditor, captureUseEditorConfig } = vi.hoisted(() => {
-  const run = vi.fn();
-  const chainable = {
-    focus: () => chainable,
-    toggleBold: () => chainable,
-    toggleItalic: () => chainable,
-    toggleUnderline: () => chainable,
-    toggleStrike: () => chainable,
-    toggleHeading: () => chainable,
-    toggleBulletList: () => chainable,
-    toggleOrderedList: () => chainable,
-    toggleBlockquote: () => chainable,
-    toggleCodeBlock: () => chainable,
-    undo: () => chainable,
-    redo: () => chainable,
-    deleteRange: () => ({
-      insertContentAt: () => ({ run }),
-    }),
-    run,
-  };
+afterEach(cleanup);
 
-  const mockEditor = {
-    getHTML: vi.fn(() => '<p>Hello</p>'),
-    getJSON: vi.fn(() => ({ type: 'doc', content: [] })),
-    isEmpty: false,
-    isActive: vi.fn(() => false),
-    chain: () => chainable,
-    on: vi.fn(),
-    off: vi.fn(),
-    destroy: vi.fn(),
-    can: () => () => false,
-  };
-
-  let lastConfig: Record<string, unknown> | undefined;
-
-  return {
-    mockEditor,
-    captureUseEditorConfig: {
-      get last() {
-        return lastConfig;
-      },
-      setLast(c: Record<string, unknown>) {
-        lastConfig = c;
-      },
-    },
-  };
-});
-
-vi.mock('@tiptap/react', () => ({
-  EditorContent: ({ editor }: { editor: unknown }) =>
-    editor ? <div data-testid="editor-content" /> : null,
-  useEditor: (config: Record<string, unknown>) => {
-    captureUseEditorConfig.setLast(config);
-    React.useEffect(() => {
-      const onUpdate = config.onUpdate as
-        | ((args: { editor: typeof mockEditor }) => void)
-        | undefined;
-      onUpdate?.({ editor: mockEditor });
-    }, []);
-    return mockEditor;
-  },
-}));
-
-function getPlaceholderFromUseEditorConfig(): string | undefined {
-  const ext = captureUseEditorConfig.last?.extensions as
-    | Array<{ name?: string; options?: { placeholder?: string } }>
-    | undefined;
-  const placeholderExt = ext?.find((e) => e?.name === 'placeholder');
-  return placeholderExt?.options?.placeholder;
+async function renderEditor(props: Partial<EditorProps> = {}) {
+  const view = render(<Editor content={{ html: '<h1>How we cut our Next.js build time in half</h1><p>Short intro.</p>' }} {...props} />);
+  const element = await waitFor(() => {
+    const found = view.container.querySelector('.ProseMirror') as (HTMLElement & { editor?: TiptapEditor }) | null;
+    if (!found?.editor) throw new Error('editor not ready');
+    return found;
+  });
+  return { ...view, editor: element.editor! };
 }
 
-function getPublishHandlerFromUseEditorConfig(): (() => void) | undefined {
-  const ext = captureUseEditorConfig.last?.extensions as
-    | Array<{ name?: string; options?: { onPublish?: () => void } }>
-    | undefined;
-  const shortcutExt = ext?.find((e) => e?.name === 'inkpilotKeyboardShortcuts');
-  return shortcutExt?.options?.onPublish;
-}
+const keyPublish = (editor: TiptapEditor) =>
+  act(() => {
+    editor.view.someProp('handleKeyDown', (handler) =>
+      handler(editor.view, new KeyboardEvent('keydown', { key: 'p', code: 'KeyP', altKey: true, ctrlKey: true })),
+    );
+  });
 
 describe('Editor', () => {
-  beforeEach(() => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+  it('renders the toolbar and content, and hides the toolbar when read-only', async () => {
+    const { container, unmount } = await renderEditor();
+    expect(container.querySelector('[role="toolbar"]')).not.toBeNull();
+    expect(screen.getByText('Short intro.')).toBeDefined();
+    unmount();
+
+    const readOnly = await renderEditor({ readOnly: true });
+    expect(readOnly.container.querySelector('[role="toolbar"]')).toBeNull();
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('renders without crashing', () => {
-    render(<Editor />);
-    expect(screen.getByTestId('editor-content')).toBeInTheDocument();
-  });
-
-  it('accepts className and style props', () => {
-    const { container } = render(
-      <Editor className="my-editor" style={{ maxWidth: 400 }} />,
-    );
-    const root = container.querySelector('.inkpilot-editor.my-editor');
-    expect(root).toBeInTheDocument();
-    expect(root).toHaveStyle({ maxWidth: '400px' });
-  });
-
-  it('fires onChange callback with EditorContent', () => {
+  it('reports content changes with html, markdown and counts', async () => {
     const onChange = vi.fn();
-    render(<Editor onChange={onChange} />);
-
+    const { editor } = await renderEditor({ onChange });
     act(() => {
-      vi.advanceTimersByTime(350);
+      editor.commands.insertContentAt(editor.state.doc.content.size, '<p>More words here.</p>');
     });
-    expect(onChange).toHaveBeenCalled();
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    expect(onChange.mock.lastCall![0]).toMatchObject({ markdown: expect.stringContaining('More words here.'), wordCount: 14 });
+  });
 
-    const payload = onChange.mock.calls[0][0];
-    expect(payload).toMatchObject({
-      html: '<p>Hello</p>',
-      text: expect.any(String),
-      wordCount: expect.any(Number),
-      readingTime: expect.any(Number),
+  it('publishes the exact current content with the analysis of that content', async () => {
+    const onPublish = vi.fn<(payload: PublishPayload) => void>();
+    const { editor } = await renderEditor({ onPublish, seo: { prePublishPanel: false } });
+    act(() => {
+      editor.commands.insertContentAt(editor.state.doc.content.size, `<p>${LONG_PARAGRAPH}</p>`);
     });
-  });
-
-  it('renders toolbar when not readOnly', () => {
-    render(<Editor />);
-    expect(screen.getByRole('toolbar', { name: 'Formatting tools' })).toBeInTheDocument();
-  });
-
-  it('hides toolbar when readOnly=true', () => {
-    render(<Editor readOnly />);
-    expect(screen.queryByRole('toolbar', { name: 'Formatting tools' })).not.toBeInTheDocument();
-  });
-
-  it('shows placeholder text via Placeholder extension config', () => {
-    render(<Editor placeholder="Write your story here" />);
-    expect(getPlaceholderFromUseEditorConfig()).toBe('Write your story here');
-  });
-
-  it('publishes directly when SEO config is omitted', async () => {
-    const onPublish = vi.fn();
-    render(<Editor onPublish={onPublish} />);
-
-    await act(async () => {
-      getPublishHandlerFromUseEditorConfig()?.();
-      await Promise.resolve();
-    });
+    // Publish immediately, before the debounced live report has caught up.
+    keyPublish(editor);
 
     expect(onPublish).toHaveBeenCalledTimes(1);
-    expect(onPublish.mock.calls[0][0]).toMatchObject({
-      html: '<p>Hello</p>',
-      text: expect.any(String),
+    const { content, report, meta } = onPublish.mock.calls[0][0];
+    expect(content.text).toContain('We started by measuring');
+    expect(report.issues.some((issue) => issue.code === 'long-sentence')).toBe(true);
+    expect(meta).toEqual({ title: '', description: '', slug: 'how-we-cut-our-next-js-build-time-in-half' });
+  });
+
+  it('refuses to publish while an image is uploading', async () => {
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: () => 'blob:test/1', revokeObjectURL: () => undefined }));
+    const onPublish = vi.fn();
+    const upload = () => new Promise<never>(() => undefined);
+    const { editor } = await renderEditor({ onPublish, image: { upload }, seo: { prePublishPanel: false } });
+    act(() => {
+      editor.commands.insertImageFiles([new File(['x'], 'a.png', { type: 'image/png' })]);
     });
-    expect(onPublish.mock.calls[0][1]).toEqual({
-      score: 0,
-      issues: [],
-      suggestions: [],
-    });
+    await act(() => flush());
+    keyPublish(editor);
+    expect(onPublish).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('opens the publish panel from the score; the slug follows the title until edited', async () => {
+    const onMetaChange = vi.fn<(meta: PublishMeta) => void>();
+    await renderEditor({ onMetaChange });
+    fireEvent.click(screen.getByRole('button', { name: /Inkpilot checks/ }));
+    expect(screen.getByRole('complementary', { name: 'Review and publish' })).toBeDefined();
+
+    const slug = screen.getByLabelText('Slug') as HTMLInputElement;
+    expect(slug.value).toBe('how-we-cut-our-next-js-build-time-in-half');
+
+    fireEvent.change(screen.getByLabelText(/SEO title/), { target: { value: 'Faster CI builds' } });
+    expect(slug.value).toBe('faster-ci-builds');
+
+    fireEvent.change(slug, { target: { value: 'my-slug' } });
+    fireEvent.change(screen.getByLabelText(/SEO title/), { target: { value: 'Another title' } });
+    expect(slug.value).toBe('my-slug');
+    expect(onMetaChange.mock.lastCall![0]).toEqual({ title: 'Another title', description: '', slug: 'my-slug' });
   });
 });

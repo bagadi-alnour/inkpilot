@@ -1,15 +1,16 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import type { Editor } from '@tiptap/core';
+import { useEditorState } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
 import type { AITone, AIIntent } from '@inkpilot/types';
 import { useTranslation } from '@inkpilot/i18n';
+import { resolveTarget } from '../../core/content/proposal';
+import { getRewriteSession } from '../../core/extensions/rewrite-session';
 
 interface FloatingToolbarProps {
   editor: Editor | null;
-  hasAI: boolean;
-  onLiveRewrite: (tone: AITone, intent: AIIntent) => void;
-  onRevert: () => void;
-  isRewriting: boolean;
-  isLive: boolean;
+  /** An AI transport is configured. */
+  enabled: boolean;
   defaultTone?: AITone;
   defaultIntent?: AIIntent;
 }
@@ -17,190 +18,78 @@ interface FloatingToolbarProps {
 const TONES: AITone[] = ['formal', 'casual', 'persuasive'];
 const INTENTS: AIIntent[] = ['simplify', 'expand', 'clarify'];
 
-export function FloatingToolbar({
-  editor,
-  hasAI,
-  onLiveRewrite,
-  onRevert,
-  isRewriting,
-  isLive,
-  defaultTone = 'casual',
-  defaultIntent = 'clarify',
-}: FloatingToolbarProps) {
+/**
+ * Bubble menu over a text selection: pick tone and intent, then Rewrite or Rephrase.
+ * The proposal itself is shown in the document by the rewrite session, so this menu
+ * hides while a session is open.
+ */
+export function FloatingToolbar({ editor, enabled, defaultTone = 'casual', defaultIntent = 'clarify' }: FloatingToolbarProps) {
   const { t } = useTranslation();
-  const [visible, setVisible] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
   const [tone, setTone] = useState<AITone>(defaultTone);
   const [intent, setIntent] = useState<AIIntent>(defaultIntent);
-  const ref = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  useEffect(() => {
-    setTone(defaultTone);
-  }, [defaultTone]);
+  useEffect(() => setTone(defaultTone), [defaultTone]);
+  useEffect(() => setIntent(defaultIntent), [defaultIntent]);
 
-  useEffect(() => {
-    setIntent(defaultIntent);
-  }, [defaultIntent]);
+  // Unsupported selections (code, images, mixed blocks) are explained instead of rewritten lossily.
+  const blockedReason = useEditorState({
+    editor,
+    selector: ({ editor: ed }) => {
+      if (!ed || !enabled) return null;
+      const { from, to } = ed.state.selection;
+      const target = resolveTarget(ed.state.doc, from, to);
+      return target.ok ? null : target.reason;
+    },
+  });
 
-  const updatePosition = useCallback(() => {
-    if (!editor) return;
+  if (!editor || !enabled) return null;
 
-    const { from, to } = editor.state.selection;
-    if (from === to) {
-      if (!isLive) setVisible(false);
-      return;
-    }
-
-    const selectedText = editor.state.doc.textBetween(from, to);
-    if (selectedText.trim().length < 2) {
-      if (!isLive) setVisible(false);
-      return;
-    }
-
-    const coords = editor.view.coordsAtPos(from);
-    const editorRect = editor.view.dom.getBoundingClientRect();
-
-    setPosition({
-      top: coords.top - editorRect.top - 52,
-      left: coords.left - editorRect.left,
-    });
-    setVisible(true);
-  }, [editor, isLive]);
-
-  useEffect(() => {
-    if (!editor || !hasAI) return;
-
-    const handleSelectionUpdate = () => {
-      if (isLive) return;
-      clearTimeout(timerRef.current);
-      setVisible(false);
-      timerRef.current = setTimeout(updatePosition, 300);
-    };
-
-    editor.on('selectionUpdate', handleSelectionUpdate);
-    return () => {
-      editor.off('selectionUpdate', handleSelectionUpdate);
-      clearTimeout(timerRef.current);
-    };
-  }, [editor, hasAI, updatePosition, isLive]);
-
-  useEffect(() => {
-    if (!visible || isLive) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setVisible(false);
-      }
-    };
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setVisible(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [visible, isLive]);
-
-  const handleToneChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setTone(e.target.value as AITone);
-  }, []);
-
-  const handleIntentChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setIntent(e.target.value as AIIntent);
-  }, []);
-
-  const handleRewrite = useCallback(() => {
-    onLiveRewrite(tone, intent);
-  }, [tone, intent, onLiveRewrite]);
-
-  /** Lighter rewrite: same tone, clarify intent (clearer wording, similar length). */
-  const handleRephrase = useCallback(() => {
-    onLiveRewrite(tone, 'clarify');
-  }, [tone, onLiveRewrite]);
-
-  const handleRevert = useCallback(() => {
-    onRevert();
-    setVisible(false);
-  }, [onRevert]);
-
-  if (!visible || !hasAI) return null;
+  const rewrite = (chosenIntent: AIIntent) => editor.chain().focus().rewriteSelection({ tone, intent: chosenIntent }).run();
 
   return (
-    <div
-      ref={ref}
+    <BubbleMenu
+      editor={editor}
       className="wf-floating-toolbar wf-floating-toolbar-live"
-      style={{ top: position.top, left: position.left }}
       role="toolbar"
       aria-label="AI writing tools"
+      shouldShow={({ editor: ed, state, from, to }) =>
+        ed.isEditable && to - from > 1 && !getRewriteSession(state) && state.doc.textBetween(from, to).trim().length > 1
+      }
     >
-      {isRewriting && <span className="wf-spinner" aria-hidden />}
-
-      <select
-        className="wf-live-select"
-        value={tone}
-        onChange={handleToneChange}
-        disabled={isRewriting}
-        aria-label={t('ai.tone')}
-      >
-        {TONES.map((toneOpt) => (
-          <option key={toneOpt} value={toneOpt}>
-            {t(`ai.tone.${toneOpt}` as const)}
+      <select className="wf-live-select" value={tone} onChange={(e) => setTone(e.target.value as AITone)} aria-label={t('ai.tone')}>
+        {TONES.map((option) => (
+          <option key={option} value={option}>
+            {t(`ai.tone.${option}`)}
           </option>
         ))}
       </select>
-
-      <select
-        className="wf-live-select"
-        value={intent}
-        onChange={handleIntentChange}
-        disabled={isRewriting}
-        aria-label={t('ai.intent')}
-      >
-        {INTENTS.map((intentOpt) => (
-          <option key={intentOpt} value={intentOpt}>
-            {t(`ai.intent.${intentOpt}` as const)}
+      <select className="wf-live-select" value={intent} onChange={(e) => setIntent(e.target.value as AIIntent)} aria-label={t('ai.intent')}>
+        {INTENTS.map((option) => (
+          <option key={option} value={option}>
+            {t(`ai.intent.${option}`)}
           </option>
         ))}
       </select>
-
-      {!isLive && (
-        <>
-          <button
-            type="button"
-            className="wf-floating-toolbar-btn"
-            onClick={handleRewrite}
-            disabled={isRewriting}
-          >
-            {t('ai.rewrite')}
-          </button>
-          <button
-            type="button"
-            className="wf-floating-toolbar-btn wf-floating-toolbar-btn-secondary"
-            onClick={handleRephrase}
-            disabled={isRewriting}
-          >
-            {t('ai.rephrase')}
-          </button>
-        </>
-      )}
-
-      {isLive && (
-        <button
-          type="button"
-          className="wf-live-revert-btn"
-          onClick={handleRevert}
-          title="Revert to original"
-        >
-          ↩ {t('ai.reject')}
-        </button>
-      )}
-    </div>
+      <button
+        type="button"
+        className="wf-floating-toolbar-btn"
+        disabled={!!blockedReason}
+        title={blockedReason ?? undefined}
+        onClick={() => rewrite(intent)}
+      >
+        {t('ai.rewrite')}
+      </button>
+      {/* Lighter pass: same tone, clarify intent (clearer wording, similar length). */}
+      <button
+        type="button"
+        className="wf-floating-toolbar-btn wf-floating-toolbar-btn-secondary"
+        disabled={!!blockedReason}
+        title={blockedReason ?? undefined}
+        onClick={() => rewrite('clarify')}
+      >
+        {t('ai.rephrase')}
+      </button>
+      {blockedReason && <span className="wf-floating-toolbar-note">{blockedReason}</span>}
+    </BubbleMenu>
   );
 }

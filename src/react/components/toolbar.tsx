@@ -1,36 +1,16 @@
-import { useRef, useCallback, useMemo, type CSSProperties } from 'react';
+import { useRef, useCallback, useMemo, type CSSProperties, type ReactNode } from 'react';
 import type { Editor } from '@tiptap/core';
+import { useEditorState } from '@tiptap/react';
 import { useTranslation } from '@inkpilot/i18n';
+import { toSafeHref } from '@inkpilot/utils';
 
 interface ToolbarProps {
   editor: Editor | null;
   onImageInsert?: (file: File) => void | Promise<void>;
   /** Resolved light/dark — active tool styling is inlined so nothing can force blue */
   themeMode?: 'light' | 'dark';
-}
-
-const ALLOWED_LINK_PROTOCOLS = ['http:', 'https:', 'mailto:', 'tel:'] as const;
-
-/**
- * Normalise a user-typed href for `setLink`.
- * Scheme-less input is promoted to https. Returns null when the scheme is not in
- * ALLOWED_LINK_PROTOCOLS or the value cannot be parsed, which keeps `javascript:`,
- * `data:` and friends out of the document regardless of tiptap's own validation.
- */
-export function toSafeHref(input: string): string | null {
-  // Strip control characters first, they are used to obfuscate "java\nscript:".
-  const trimmed = input.trim().replace(/\p{Cc}/gu, '');
-  if (!trimmed) return null;
-
-  const hasScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed);
-  try {
-    const url = new URL(hasScheme ? trimmed : `https://${trimmed}`);
-    return ALLOWED_LINK_PROTOCOLS.includes(url.protocol as (typeof ALLOWED_LINK_PROTOCOLS)[number])
-      ? url.toString()
-      : null;
-  } catch {
-    return null;
-  }
+  /** Rendered at the end of the toolbar (e.g. the score badge). */
+  trailing?: ReactNode;
 }
 
 function activeButtonStyle(mode: 'light' | 'dark'): CSSProperties {
@@ -90,9 +70,35 @@ function Separator() {
   return <div className="wf-toolbar-separator" role="separator" />;
 }
 
-export function Toolbar({ editor, onImageInsert, themeMode = 'light' }: ToolbarProps) {
+export function Toolbar({ editor, onImageInsert, themeMode = 'light', trailing }: ToolbarProps) {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Tiptap v3 no longer re-renders on every transaction, so active states are
+  // read through a selector that updates on selection changes too.
+  const active = useEditorState({
+    editor,
+    selector: ({ editor: ed }) => {
+      if (!ed) return null;
+      return {
+        bold: ed.isActive('bold'),
+        italic: ed.isActive('italic'),
+        underline: ed.isActive('underline'),
+        strike: ed.isActive('strike'),
+        h1: ed.isActive('heading', { level: 1 }),
+        h2: ed.isActive('heading', { level: 2 }),
+        h3: ed.isActive('heading', { level: 3 }),
+        bulletList: ed.isActive('bulletList'),
+        orderedList: ed.isActive('orderedList'),
+        blockquote: ed.isActive('blockquote'),
+        codeBlock: ed.isActive('codeBlock'),
+        link: ed.isActive('link'),
+        alignLeft: ed.isActive({ textAlign: 'left' }),
+        alignCenter: ed.isActive({ textAlign: 'center' }),
+        alignRight: ed.isActive({ textAlign: 'right' }),
+      };
+    },
+  });
 
   const handleImageClick = useCallback(() => {
     fileInputRef.current?.click();
@@ -116,7 +122,7 @@ export function Toolbar({ editor, onImageInsert, themeMode = 'light' }: ToolbarP
       <ToolbarButton
         themeMode={themeMode}
         onClick={() => editor.chain().focus().toggleBold().run()}
-        isActive={editor.isActive('bold')}
+        isActive={active?.bold}
         title={t('toolbar.bold')}
       >
         <strong>B</strong>
@@ -124,7 +130,7 @@ export function Toolbar({ editor, onImageInsert, themeMode = 'light' }: ToolbarP
       <ToolbarButton
         themeMode={themeMode}
         onClick={() => editor.chain().focus().toggleItalic().run()}
-        isActive={editor.isActive('italic')}
+        isActive={active?.italic}
         title={t('toolbar.italic')}
       >
         <em>I</em>
@@ -132,7 +138,7 @@ export function Toolbar({ editor, onImageInsert, themeMode = 'light' }: ToolbarP
       <ToolbarButton
         themeMode={themeMode}
         onClick={() => editor.chain().focus().toggleUnderline().run()}
-        isActive={editor.isActive('underline')}
+        isActive={active?.underline}
         title={t('toolbar.underline')}
       >
         <u>U</u>
@@ -140,7 +146,7 @@ export function Toolbar({ editor, onImageInsert, themeMode = 'light' }: ToolbarP
       <ToolbarButton
         themeMode={themeMode}
         onClick={() => editor.chain().focus().toggleStrike().run()}
-        isActive={editor.isActive('strike')}
+        isActive={active?.strike}
         title={t('toolbar.strikethrough')}
       >
         <s>S</s>
@@ -151,7 +157,7 @@ export function Toolbar({ editor, onImageInsert, themeMode = 'light' }: ToolbarP
       <ToolbarButton
         themeMode={themeMode}
         onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-        isActive={editor.isActive('heading', { level: 1 })}
+        isActive={active?.h1}
         title={t('toolbar.heading1')}
       >
         H1
@@ -159,7 +165,7 @@ export function Toolbar({ editor, onImageInsert, themeMode = 'light' }: ToolbarP
       <ToolbarButton
         themeMode={themeMode}
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        isActive={editor.isActive('heading', { level: 2 })}
+        isActive={active?.h2}
         title={t('toolbar.heading2')}
       >
         H2
@@ -167,7 +173,7 @@ export function Toolbar({ editor, onImageInsert, themeMode = 'light' }: ToolbarP
       <ToolbarButton
         themeMode={themeMode}
         onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-        isActive={editor.isActive('heading', { level: 3 })}
+        isActive={active?.h3}
         title={t('toolbar.heading3')}
       >
         H3
@@ -178,7 +184,7 @@ export function Toolbar({ editor, onImageInsert, themeMode = 'light' }: ToolbarP
       <ToolbarButton
         themeMode={themeMode}
         onClick={() => editor.chain().focus().toggleBulletList().run()}
-        isActive={editor.isActive('bulletList')}
+        isActive={active?.bulletList}
         title={t('toolbar.bulletList')}
       >
         &bull;
@@ -186,7 +192,7 @@ export function Toolbar({ editor, onImageInsert, themeMode = 'light' }: ToolbarP
       <ToolbarButton
         themeMode={themeMode}
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        isActive={editor.isActive('orderedList')}
+        isActive={active?.orderedList}
         title={t('toolbar.orderedList')}
       >
         1.
@@ -194,7 +200,7 @@ export function Toolbar({ editor, onImageInsert, themeMode = 'light' }: ToolbarP
       <ToolbarButton
         themeMode={themeMode}
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
-        isActive={editor.isActive('blockquote')}
+        isActive={active?.blockquote}
         title={t('toolbar.blockquote')}
       >
         &ldquo;
@@ -202,7 +208,7 @@ export function Toolbar({ editor, onImageInsert, themeMode = 'light' }: ToolbarP
       <ToolbarButton
         themeMode={themeMode}
         onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-        isActive={editor.isActive('codeBlock')}
+        isActive={active?.codeBlock}
         title={t('toolbar.codeBlock')}
       >
         {'</>'}
@@ -226,7 +232,7 @@ export function Toolbar({ editor, onImageInsert, themeMode = 'light' }: ToolbarP
           if (!safeHref) return;
           editor.chain().focus().extendMarkRange('link').setLink({ href: safeHref }).run();
         }}
-        isActive={editor.isActive('link')}
+        isActive={active?.link}
         title={t('toolbar.link')}
       >
         &#128279;
@@ -234,7 +240,7 @@ export function Toolbar({ editor, onImageInsert, themeMode = 'light' }: ToolbarP
       <ToolbarButton
         themeMode={themeMode}
         onClick={() => editor.chain().focus().setTextAlign('left').run()}
-        isActive={editor.isActive({ textAlign: 'left' })}
+        isActive={active?.alignLeft}
         title={t('toolbar.alignLeft')}
       >
         &#8676;
@@ -242,7 +248,7 @@ export function Toolbar({ editor, onImageInsert, themeMode = 'light' }: ToolbarP
       <ToolbarButton
         themeMode={themeMode}
         onClick={() => editor.chain().focus().setTextAlign('center').run()}
-        isActive={editor.isActive({ textAlign: 'center' })}
+        isActive={active?.alignCenter}
         title={t('toolbar.alignCenter')}
       >
         &#8596;
@@ -250,7 +256,7 @@ export function Toolbar({ editor, onImageInsert, themeMode = 'light' }: ToolbarP
       <ToolbarButton
         themeMode={themeMode}
         onClick={() => editor.chain().focus().setTextAlign('right').run()}
-        isActive={editor.isActive({ textAlign: 'right' })}
+        isActive={active?.alignRight}
         title={t('toolbar.alignRight')}
       >
         &#8677;
@@ -286,6 +292,7 @@ export function Toolbar({ editor, onImageInsert, themeMode = 'light' }: ToolbarP
       >
         &#8618;
       </ToolbarButton>
+      {trailing && <span className="ip-toolbar-trailing">{trailing}</span>}
     </div>
   );
 }

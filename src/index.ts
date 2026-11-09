@@ -5,8 +5,7 @@ export type { EditorProps } from './react/editor';
 // Hooks API
 export { useInkpilotEditor } from './react/hooks/use-editor';
 export { useAIRewrite } from './react/hooks/use-ai-rewrite';
-export { useSEOAnalysis } from './react/hooks/use-seo-analysis';
-export { useStorage } from './react/hooks/use-storage';
+export { useSEOReport } from './react/hooks/use-seo-report';
 export { useTheme } from './react/hooks/use-theme';
 
 // All public types
@@ -14,25 +13,23 @@ export type {
   EditorConfig,
   EditorContent,
   EditorInstance,
+  PublishMeta,
+  PublishPayload,
   AIConfig,
-  AIProvider,
+  AIBehaviour,
+  AIEndpointConfig,
+  AITransportConfig,
   AITone,
   AIIntent,
   RewriteResult,
   RewriteOptions,
-  DiffSegment,
-  AIProviderAdapter,
-  StorageConfig,
-  StorageProvider,
-  StorageAdapter,
-  UploadedFile,
   SEOConfig,
-  SEOAnalysis,
   SEOIssue,
-  SEOSuggestion,
-  SEOSignal,
-  SEOSignalType,
-  SERPPreviewData,
+  SEOIssueCode,
+  SEOIssueSeverity,
+  SEOFixKind,
+  SEOReport,
+  SEORuleOptions,
   ThemeConfig,
   ThemeMode,
   ThemeColors,
@@ -40,15 +37,19 @@ export type {
   I18nConfig,
   TranslationStrings,
   TranslationKey,
+  TranslationParams,
   ImageConfig,
-  ImageFormat,
-  EditorEventMap,
-  EditorEventName,
+  ImageUploader,
+  UploadedImage,
 } from './types';
 
+// AI transport and wire protocol (pair with `@inkpilot/editor/server`)
+export { createFetchTransport } from './ai/transport';
+export type { InkpilotTransport, FetchTransportOptions } from './ai/transport';
+export type { StreamRequest, StreamEvent, StreamErrorCode, FixableIssueCode } from './protocol';
+
 // Utilities for advanced users
-export { createAIProvider, resolveAIFromEnv } from './ai/provider';
-export { createStorageAdapter, resolveStorageFromEnv } from './storage/factory';
-export { computeDiff } from './ai/diff';
-export { analyzeContent } from './seo/analyzer';
-export { generateSERPPreview } from './seo/serp-preview';
+export { presignedUpload, prepareImage } from './image';
+export type { PresignedUploadOptions } from './image';
+export { analyzeDocument, DEFAULT_RULE_OPTIONS } from './seo/engine';
+export { slugify } from './seo/slug';

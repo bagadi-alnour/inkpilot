@@ -1,15 +1,15 @@
-export { createEditor } from './editor';
-export type { CreateEditorOptions } from './editor';
 export { getContent } from './document';
 export { htmlToMarkdown, htmlToText, countWords, estimateReadingTime } from './serializers';
-export { createEventEmitter } from './events';
 export {
   createInkpilotKit,
-  AIRewriteExtension,
-  aiRewritePluginKey,
-  SEOSignalsExtension,
+  RewriteSessionExtension,
+  rewriteSessionKey,
+  getRewriteSession,
+  SEOReportExtension,
+  seoReportKey,
+  getSEOReport,
+  findIssue,
   ImageUploadExtension,
   KeyboardShortcutsExtension,
-  computeSignals,
 } from './extensions';
-export type { AIRewriteState } from './extensions';
+export type { RewriteSession, RewriteSource, RewriteStatus } from './extensions';

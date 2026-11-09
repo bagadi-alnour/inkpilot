@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toSafeHref } from '@inkpilot/react/components/toolbar';
+import { toSafeHref } from '@inkpilot/utils';
 
 describe('toSafeHref', () => {
   it('keeps http and https URLs', () => {

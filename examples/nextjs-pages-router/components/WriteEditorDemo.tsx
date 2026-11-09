@@ -3,13 +3,10 @@ import { useMemo, useState } from 'react';
 import { Editor } from '@inkpilot/editor';
 import type {
   AIConfig,
-  AIProvider,
   EditorContent,
-  SEOAnalysis,
+  PublishPayload,
   ThemePreset,
 } from '@inkpilot/editor';
-import type { AIAvailability } from '@/lib/aiEnv';
-import { createProxyAIConfig } from '@/lib/aiEnv';
 import { locales, translations } from '@/lib/translations';
 
 const PRESETS: { value: ThemePreset; label: string }[] = [
@@ -19,35 +16,32 @@ const PRESETS: { value: ThemePreset; label: string }[] = [
 ];
 
 export interface WriteEditorDemoProps {
-  availability: AIAvailability;
+  /** Which model /api/inkpilot uses, for display. */
+  modelLabel: string;
 }
 
-export default function WriteEditorDemo({ availability }: WriteEditorDemoProps) {
+export default function WriteEditorDemo({ modelLabel }: WriteEditorDemoProps) {
   const [wordCount, setWordCount] = useState(0);
   const [readingTime, setReadingTime] = useState(0);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [preset, setPreset] = useState<ThemePreset>('default');
-  const [provider, setProvider] = useState<AIProvider>(availability.defaultProvider);
   const [locale, setLocale] = useState('en');
 
   const currentLocale = locales.find((l) => l.code === locale) ?? locales[0];
-  const providerEnabled = availability[provider];
 
-  const aiConfig: AIConfig | undefined = useMemo(() => {
-    if (!providerEnabled) return undefined;
-    return {
-      ...createProxyAIConfig(provider),
-    };
-  }, [provider, providerEnabled]);
+  // Every AI request goes through /api/inkpilot (createInkpilotHandler); keys stay on the server.
+  const aiConfig: AIConfig = useMemo(() => ({ endpoint: '/api/inkpilot' }), []);
+  const [published, setPublished] = useState<string | null>(null);
 
   const handleChange = (content: EditorContent) => {
     setWordCount(content.wordCount);
     setReadingTime(content.readingTime);
   };
 
-  const handlePublish = (content: EditorContent, analysis: SEOAnalysis) => {
-    console.log('Published!', { content, analysis });
-    window.alert(`Published! SEO Score: ${analysis.score}/100\nWord count: ${content.wordCount}`);
+  const handlePublish = ({ content, meta, report }: PublishPayload) => {
+    // A real app would save these; the demo logs them.
+    console.log('Published', { meta, score: report.score, issues: report.issues.length, html: content.html });
+    setPublished(`Published “${meta.title || meta.slug}” · Inkpilot checks ${report.score}/100`);
   };
 
   const border = theme === 'dark' ? '#334155' : '#e2e8f0';
@@ -161,29 +155,8 @@ export default function WriteEditorDemo({ availability }: WriteEditorDemoProps) 
           flexWrap: 'wrap',
         }}
       >
-        <select
-          value={provider}
-          onChange={(e) => setProvider(e.target.value as AIProvider)}
-          style={{
-            padding: '8px 12px',
-            border: `1px solid ${border}`,
-            borderRadius: 6,
-            fontSize: 13,
-            background: inputBg,
-            color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
-          }}
-        >
-          <option value="openai" disabled={!availability.openai}>
-            OpenAI{availability.openai ? '' : ' (set SECRET_OPENAI_KEY or OPENAI_API_KEY)'}
-          </option>
-          <option value="anthropic" disabled={!availability.anthropic}>
-            Anthropic{availability.anthropic ? '' : ' (set SECRET_ANTHROPIC_KEY or ANTHROPIC_API_KEY)'}
-          </option>
-        </select>
-        <span style={{ fontSize: 12, color: aiConfig ? '#16a34a' : '#94a3b8' }}>
-          {availability.hasAnyKey
-            ? `${provider} requests are proxied through the Next.js server`
-            : 'Set SECRET_OPENAI_KEY / SECRET_ANTHROPIC_KEY (or OPENAI_API_KEY / ANTHROPIC_API_KEY) in .env.local and restart'}
+        <span style={{ fontSize: 13, color: theme === 'dark' ? '#f8fafc' : '#0f172a' }}>
+          AI runs on the Next.js server through <code>/api/inkpilot</code> using {modelLabel}. Images are embedded as data URLs here; see the App Router example for uploads.
         </span>
       </div>
 
@@ -201,14 +174,9 @@ export default function WriteEditorDemo({ availability }: WriteEditorDemoProps) 
           locale={locale}
           i18n={{ locale, translations: translations[locale] }}
           seo={{
-            lightSignals: true,
+            liveSignals: true,
             prePublishPanel: true,
-            targetKeywords: ['inkpilot', 'editor', 'nextjs'],
-          }}
-          storage={{
-            provider: 's3',
-            bucket: 'demo',
-            presignedUrlEndpoint: '/api/upload',
+            keywords: ['build time'],
           }}
           onChange={handleChange}
           onPublish={handlePublish}
@@ -219,11 +187,16 @@ export default function WriteEditorDemo({ availability }: WriteEditorDemoProps) 
         />
       </div>
 
+      {published && (
+        <p role="status" style={{ marginTop: 12, fontSize: 14, fontWeight: 600, color: theme === 'dark' ? '#f8fafc' : '#0f172a' }}>
+          {published}
+        </p>
+      )}
+
       <footer style={{ marginTop: 16, fontSize: 12, color: '#94a3b8', textAlign: 'center' }}>
-        AI calls stay on the Next.js server via <code>/api/ai/openai</code> and{' '}
-        <code>/api/ai/anthropic</code>. Use the toolbar to insert images at <code>/api/upload</code>.
+        AI calls stay on the Next.js server via <code>/api/inkpilot</code>.
         <br />
-        Press <kbd>Cmd+Shift+P</kbd> for the pre-publish SEO panel.
+        Click the score in the toolbar (or press <kbd>Cmd/Ctrl+Alt+P</kbd>) to review and publish.
       </footer>
     </div>
   );

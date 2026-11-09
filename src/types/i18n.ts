@@ -1,9 +1,14 @@
+import type { IssueCode } from '../seo/engine/types';
+
 export interface I18nConfig {
   locale?: string;
   translations?: Partial<TranslationStrings>;
 }
 
-export interface TranslationStrings {
+/** `seo.issue.<code>` (short label) and `seo.issue.<code>.detail` (with `{param}` placeholders) for every issue. */
+type IssueStrings = { [K in IssueCode as `seo.issue.${K}`]: string } & { [K in IssueCode as `seo.issue.${K}.detail`]: string };
+
+export interface TranslationStrings extends IssueStrings {
   // Toolbar
   'toolbar.bold': string;
   'toolbar.italic': string;
@@ -27,10 +32,6 @@ export interface TranslationStrings {
   // AI
   'ai.rewrite': string;
   'ai.rephrase': string;
-  'ai.rewriting': string;
-  'ai.accept': string;
-  'ai.reject': string;
-  'ai.options': string;
   'ai.tone': string;
   'ai.intent': string;
   'ai.tone.formal': string;
@@ -39,37 +40,44 @@ export interface TranslationStrings {
   'ai.intent.simplify': string;
   'ai.intent.expand': string;
   'ai.intent.clarify': string;
-  'ai.preserveMeaning': string;
-  'ai.restructure': string;
-  'ai.restructuring': string;
 
-  // SEO signals
-  'seo.missingH1': string;
-  'seo.weakTitle': string;
-  'seo.headingHierarchy': string;
-  'seo.emptyAlt': string;
+  // Rewrite preview
+  'rewrite.streaming': string;
+  'rewrite.ready': string;
+  'rewrite.accept': string;
+  'rewrite.reject': string;
+  'rewrite.stop': string;
+  'rewrite.retry': string;
+  'rewrite.discard': string;
 
-  // SEO panel
-  'seo.panel.title': string;
-  'seo.panel.score': string;
-  'seo.panel.issues': string;
-  'seo.panel.suggestions': string;
-  'seo.panel.publish': string;
-  'seo.panel.publishAnyway': string;
-  'seo.panel.close': string;
-  'seo.panel.apply': string;
-  'seo.panel.dismiss': string;
+  // SEO issue actions
+  'seo.issue.fix': string;
+  'seo.issue.ignore': string;
+  'seo.score.label': string;
 
-  // SERP
-  'seo.serp.title': string;
-  'seo.serp.preview': string;
-
-  // Image
-  'image.upload': string;
-  'image.uploading': string;
-  'image.dropHere': string;
-  'image.altText': string;
-  'image.suggestAlt': string;
+  // Publish panel
+  'publish.title': string;
+  'publish.close': string;
+  'publish.scoreOf': string;
+  'publish.checks': string;
+  'publish.noChecks': string;
+  'publish.fix': string;
+  'publish.show': string;
+  'publish.suggest': string;
+  'publish.searchAppearance': string;
+  'publish.seoTitle': string;
+  'publish.seoTitlePlaceholder': string;
+  'publish.description': string;
+  'publish.slug': string;
+  'publish.suggestTitles': string;
+  'publish.suggestDescriptions': string;
+  'publish.suggesting': string;
+  'publish.suggestFailed': string;
+  'publish.useSuggestion': string;
+  'publish.serpNote': string;
+  'publish.publish': string;
+  'publish.uploading': string;
+  'publish.localImage': string;
 
   // General
   'general.loading': string;
@@ -80,3 +88,6 @@ export interface TranslationStrings {
 }
 
 export type TranslationKey = keyof TranslationStrings;
+
+/** Values substituted into `{name}` placeholders. */
+export type TranslationParams = Record<string, string | number>;

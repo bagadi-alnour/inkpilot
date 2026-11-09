@@ -1,44 +1,30 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Editor } from '@inkpilot/editor';
-import type { EditorContent, SEOAnalysis, AIConfig, AIProvider } from '@inkpilot/editor';
+import type { AIConfig, EditorContent, PublishPayload } from '@inkpilot/editor';
 import '@inkpilot/editor/styles.css';
 import { locales, translations } from './translations';
-import { resolveAIFromEnv } from './aiEnv';
 
-const envAI = resolveAIFromEnv();
-const envProvider = envAI.provider ?? 'openai';
-const envKey = envAI.apiKey;
+// The Vite dev server serves /api/inkpilot (see server/inkpilot-plugin.ts); keys stay on the server.
+const AI: AIConfig = { endpoint: '/api/inkpilot', defaultTone: 'formal', defaultIntent: 'clarify' };
 
 export function App() {
   const [wordCount, setWordCount] = useState(0);
   const [readingTime, setReadingTime] = useState(0);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [provider, setProvider] = useState<AIProvider>(envProvider);
-  const [apiKey, setApiKey] = useState(envKey ?? '');
-  const [showKeyInput, setShowKeyInput] = useState(!envAI.hasAnyKey);
+  const [published, setPublished] = useState<string | null>(null);
   const [locale, setLocale] = useState('en');
 
   const currentLocale = locales.find((l) => l.code === locale) ?? locales[0];
-
-  const aiConfig: AIConfig | undefined = useMemo(() => {
-    if (!apiKey.trim()) return undefined;
-    return {
-      provider,
-      apiKey: apiKey.trim(),
-      defaultTone: 'formal' as const,
-      defaultIntent: 'clarify' as const,
-      preserveMeaning: true,
-    };
-  }, [provider, apiKey]);
 
   const handleChange = (content: EditorContent) => {
     setWordCount(content.wordCount);
     setReadingTime(content.readingTime);
   };
 
-  const handlePublish = (content: EditorContent, analysis: SEOAnalysis) => {
-    console.log('Published!', { content, analysis });
-    alert(`Published! SEO Score: ${analysis.score}/100\nWord count: ${content.wordCount}`);
+  const handlePublish = ({ content, meta, report }: PublishPayload) => {
+    // A real app would save these; the demo logs them.
+    console.log('Published', { meta, score: report.score, issues: report.issues.length, html: content.html });
+    setPublished(`Published “${meta.title || meta.slug}” · Inkpilot checks ${report.score}/100`);
   };
 
   return (
@@ -104,54 +90,6 @@ export function App() {
         </div>
       </header>
 
-      {showKeyInput && (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: 16,
-            background: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            borderRadius: 10,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            flexWrap: 'wrap',
-          }}
-        >
-          <select
-            value={provider}
-            onChange={(e) => setProvider(e.target.value as AIProvider)}
-            style={{
-              padding: '8px 12px',
-              border: '1px solid #cbd5e1',
-              borderRadius: 6,
-              fontSize: 13,
-              background: '#fff',
-            }}
-          >
-            <option value="openai">OpenAI</option>
-            <option value="anthropic">Anthropic</option>
-          </select>
-          <input
-            type="password"
-            placeholder={provider === 'openai' ? 'sk-...' : 'sk-ant-...'}
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            style={{
-              flex: 1,
-              minWidth: 240,
-              padding: '8px 12px',
-              border: '1px solid #cbd5e1',
-              borderRadius: 6,
-              fontSize: 13,
-            }}
-          />
-          <span style={{ fontSize: 12, color: aiConfig ? '#16a34a' : '#94a3b8' }}>
-            {aiConfig ? 'AI enabled' : 'Enter key to enable AI'}
-          </span>
-        </div>
-      )}
-
       <div
         style={{
           border: '1px solid #e2e8f0',
@@ -161,14 +99,14 @@ export function App() {
         }}
       >
         <Editor
-          ai={aiConfig}
+          ai={AI}
           theme={{ mode: theme, preset: 'default' }}
           locale={locale}
           i18n={{ locale, translations: translations[locale] }}
           seo={{
-            lightSignals: true,
+            liveSignals: true,
             prePublishPanel: true,
-            targetKeywords: ['inkpilot', 'editor'],
+            keywords: ['build time'],
           }}
           onChange={handleChange}
           onPublish={handlePublish}
@@ -177,12 +115,16 @@ export function App() {
         />
       </div>
 
+      {published && (
+        <p role="status" style={{ marginTop: 12, fontSize: 14, fontWeight: 600, color: theme === 'dark' ? '#f8fafc' : '#0f172a' }}>
+          {published}
+        </p>
+      )}
+
       <footer style={{ marginTop: 16, fontSize: 12, color: '#94a3b8', textAlign: 'center' }}>
-        Select text to see AI tone/intent dropdowns &mdash; text changes live as you switch.
+        Select text to rewrite it with AI, or hover an underlined issue and choose Fix with AI.
         <br />
-        Click the camera icon in the toolbar to insert images.
-        <br />
-        Press <kbd>Cmd+Shift+P</kbd> to trigger the pre-publish SEO panel.
+        Click the score in the toolbar (or press <kbd>Cmd/Ctrl+Alt+P</kbd>) to review and publish.
       </footer>
     </div>
   );

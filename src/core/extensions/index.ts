@@ -1,6 +1,6 @@
 export { createInkpilotKit } from './inkpilot-kit';
-export { AIRewriteExtension, aiRewritePluginKey } from './ai-rewrite';
-export type { AIRewriteState } from './ai-rewrite';
-export { SEOSignalsExtension, computeSignals } from './seo-signals';
+export { RewriteSessionExtension, rewriteSessionKey, getRewriteSession } from './rewrite-session';
+export type { RewriteSession, RewriteSource, RewriteStatus } from './rewrite-session';
+export { SEOReportExtension, seoReportKey, getSEOReport, findIssue } from './seo-report';
 export { ImageUploadExtension } from './image-upload';
 export { KeyboardShortcutsExtension } from './keyboard-shortcuts';

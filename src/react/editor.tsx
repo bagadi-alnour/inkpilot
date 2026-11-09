@@ -1,23 +1,21 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
-import { EditorContent } from '@tiptap/react';
-import type { EditorConfig, SEOAnalysis } from '@inkpilot/types';
+import { EditorContent, useEditorState } from '@tiptap/react';
+import type { EditorConfig, PublishMeta } from '@inkpilot/types';
 import { I18nContext, createI18nValue } from '@inkpilot/i18n';
-import { generateSERPPreview } from '@inkpilot/seo';
-import { blobToDataUrl, processImage, revokeImageProcessingResult } from '@inkpilot/image';
-import { getContent } from '@inkpilot/core';
-import { resolveAIFromEnv } from '@inkpilot/ai';
-import { resolveStorageFromEnv } from '@inkpilot/storage';
-import { useStorage } from './hooks/use-storage';
+import { createFetchTransport } from '../ai/transport';
+import type { InkpilotTransport } from '../ai/transport';
+import { takePublishSnapshot } from '../core/publish';
+import { firstH1 } from '../seo/engine/blocks';
+import { slugify } from '../seo/slug';
 import { InkpilotContext } from './context';
 import { useInkpilotEditor } from './hooks/use-editor';
-import { useAIRewrite } from './hooks/use-ai-rewrite';
-import { useSEOAnalysis } from './hooks/use-seo-analysis';
 import { useTheme } from './hooks/use-theme';
+import { analyzeContextFrom } from './seo-context';
 import { Toolbar } from './components/toolbar';
 import { FloatingToolbar } from './components/floating-toolbar';
-import { AIRewritePanel } from './components/ai-rewrite-panel';
-import { SEOSignalIndicators } from './components/seo-signals';
-import { SEOPanel } from './components/seo-panel';
+import { ScoreBadge } from './components/score-badge';
+import { IssuePopover } from './components/issue-popover';
+import { PublishDrawer } from './components/publish-drawer';
 import '../theme/styles.css';
 
 export interface EditorProps extends EditorConfig {
@@ -28,21 +26,16 @@ export interface EditorProps extends EditorConfig {
   placeholder?: string;
 }
 
-const EMPTY_ANALYSIS: SEOAnalysis = {
-  score: 0,
-  issues: [],
-  suggestions: [],
-};
-
 export function Editor(props: EditorProps) {
   const {
     ai,
-    storage,
     seo,
     theme,
     i18n: i18nConfig,
     locale,
     content,
+    defaultMeta,
+    onMetaChange,
     onChange,
     onPublish,
     className,
@@ -53,146 +46,120 @@ export function Editor(props: EditorProps) {
   } = props;
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const publishRef = useRef<() => void>(() => undefined);
-  const [showSEOPanel, setShowSEOPanel] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
+  const panelEnabled = seo?.prePublishPanel !== false;
 
-  const resolvedAI = useMemo(
-    () => ai ?? resolveAIFromEnv(),
-    [ai],
-  );
-
-  const resolvedStorage = useMemo(
-    () => storage ?? resolveStorageFromEnv(),
-    [storage],
-  );
-
-  const { editor, content: currentContent, signals } = useInkpilotEditor({
-    ai: resolvedAI,
-    storage: resolvedStorage,
-    seo,
-    image: props.image,
-    content,
-    onChange,
-    placeholder,
-    autoFocus,
-    readOnly,
-    onRewrite: undefined,
-    onPublish: () => publishRef.current(),
-  });
-
-  const aiRewrite = useAIRewrite(editor, resolvedAI);
-  const {
-    analysis,
-    isAnalyzing,
-    runAnalysis,
-  } = useSEOAnalysis(editor, seo, resolvedAI, signals);
-  const { theme: resolvedTheme } = useTheme(theme, containerRef);
-  const { upload: storageUpload } = useStorage(resolvedStorage);
-
-  useEffect(() => {
-    if (showSEOPanel) {
-      void runAnalysis();
-    }
-  }, [runAnalysis, showSEOPanel]);
+  // Read lazily by the editor's extensions, so a new object per render is fine.
+  const transport = useMemo((): InkpilotTransport | undefined => {
+    if (!ai) return undefined;
+    if (ai.transport) return ai.transport;
+    return createFetchTransport({ endpoint: ai.endpoint, headers: ai.headers });
+  }, [ai]);
 
   const i18nValue = useMemo(
     () => createI18nValue(locale ?? i18nConfig?.locale ?? 'en', i18nConfig?.translations),
     [locale, i18nConfig],
   );
 
-  const handlePublish = useCallback(() => {
-    if (!editor) return;
-    const contentToPublish = currentContent ?? getContent(editor);
-    const finalAnalysis = analysis ?? EMPTY_ANALYSIS;
-    onPublish?.(contentToPublish, finalAnalysis);
-    setShowSEOPanel(false);
-  }, [analysis, currentContent, editor, onPublish]);
+  // Search metadata. The slug follows the title until the writer edits it.
+  const [meta, setMeta] = useState<PublishMeta>(() => ({ title: '', description: '', slug: '', ...defaultMeta }));
+  const [slugEdited, setSlugEdited] = useState(() => !!defaultMeta?.slug);
+  // The engine checks the description only when the panel that edits it exists.
+  const engineMeta = useMemo(
+    () => (panelEnabled ? { title: meta.title, description: meta.description } : undefined),
+    [panelEnabled, meta.title, meta.description],
+  );
 
-  const startPublish = useCallback(async () => {
-    if (!editor) return;
+  const { editor } = useInkpilotEditor({
+    ai,
+    transport,
+    meta: engineMeta,
+    rewriteLabel: (key) => i18nValue.t(`rewrite.${key}`),
+    locale,
+    seo,
+    image: props.image,
+    codeBlock: props.codeBlock,
+    content,
+    onChange,
+    placeholder,
+    autoFocus,
+    readOnly,
+    // Called lazily from the shortcut, after `editor` above is initialized.
+    onRewrite: () =>
+      editor
+        ?.chain()
+        .focus()
+        .rewriteSelection({
+          tone: ai?.defaultTone ?? 'casual',
+          intent: ai?.defaultIntent ?? 'clarify',
+          preserveMeaning: ai?.preserveMeaning,
+        })
+        .run(),
+    onPublish: () => publishRef.current(),
+  });
 
-    if (!seo || seo.prePublishPanel === false) {
-      const contentToPublish = currentContent ?? getContent(editor);
-      const finalAnalysis = seo
-        ? (await runAnalysis()) ?? EMPTY_ANALYSIS
-        : EMPTY_ANALYSIS;
-      onPublish?.(contentToPublish, finalAnalysis);
+  const { theme: resolvedTheme } = useTheme(theme, containerRef);
+  const h1 = useEditorState({ editor, selector: ({ editor: ed }) => (ed ? (firstH1(ed.state.doc)?.text.trim() ?? '') : '') }) ?? '';
+  const effectiveMeta = useMemo(
+    (): PublishMeta => (slugEdited ? meta : { ...meta, slug: slugify(meta.title || h1) }),
+    [meta, slugEdited, h1],
+  );
+
+  const onMetaChangeRef = useRef(onMetaChange);
+  onMetaChangeRef.current = onMetaChange;
+  const metaKey = JSON.stringify(effectiveMeta);
+  useEffect(() => {
+    onMetaChangeRef.current?.(effectiveMeta);
+    // `metaKey` captures every field; the object identity changes more often.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metaKey]);
+
+  const updateMeta = useCallback((patch: Partial<PublishMeta>) => {
+    if (patch.slug !== undefined) setSlugEdited(true);
+    setMeta((previous) => ({ ...previous, ...patch }));
+  }, []);
+
+  const keywordsKey = seo?.keywords?.join('\u0000') ?? '';
+  useEffect(() => {
+    // Locale, keywords and metadata feed the analysis; re-run it when they change.
+    editor?.commands.refreshReport();
+  }, [editor, locale, keywordsKey, engineMeta]);
+
+  /** Publish exactly what is in the editor now, with the analysis of that content. */
+  const publish = useCallback(() => {
+    if (!editor) return;
+    const snapshot = takePublishSnapshot(editor, analyzeContextFrom({ locale, seo, meta: engineMeta }));
+    if (!snapshot.ok) {
+      const key = snapshot.reason === 'uploading' ? 'publish.uploading' : 'publish.localImage';
+      setBlockedMessage(i18nValue.t(key, { count: snapshot.count }));
       return;
     }
-
-    setShowSEOPanel(true);
-  }, [currentContent, editor, onPublish, runAnalysis, seo]);
+    setBlockedMessage(null);
+    onPublish?.({ content: snapshot.content, meta: effectiveMeta, report: snapshot.report });
+    setDrawerOpen(false);
+  }, [editor, locale, seo, engineMeta, effectiveMeta, onPublish, i18nValue]);
 
   publishRef.current = () => {
-    void startPublish();
+    if (panelEnabled) setDrawerOpen(true);
+    else publish();
   };
 
-  const serpPreview = useMemo(() => {
-    if (!currentContent || !editor) return undefined;
-    let title = '';
-    const doc = editor.state?.doc;
-    if (doc?.descendants) {
-      doc.descendants((node) => {
-        if (!title && node.type.name === 'heading' && node.attrs.level === 1) {
-          title = node.textContent;
-        }
-        return !title;
-      });
-    }
-    const description = currentContent.text.slice(0, 160);
-    return generateSERPPreview(title, description);
-  }, [currentContent, editor]);
-
   const handleImageInsert = useCallback(
-    async (file: File) => {
-      if (!editor) return;
-      const alt = file.name.replace(/\.[^.]+$/, '');
-      let imageResult: Awaited<ReturnType<typeof processImage>> | null = null;
-
-      try {
-        imageResult = await processImage(file, { config: props.image });
-        const processed = imageResult.compressed ?? imageResult.original;
-        let src: string;
-
-        if (resolvedStorage) {
-          const blob = processed.blob;
-          const uploadFile = blob instanceof File
-            ? blob
-            : new File([blob], file.name, { type: blob.type || file.type });
-          const uploaded = await storageUpload(uploadFile, file.name);
-          if (uploaded) {
-            src = uploaded.url;
-          } else {
-            src = await blobToDataUrl(processed.blob);
-          }
-        } else {
-          src = await blobToDataUrl(processed.blob);
-        }
-
-        editor.chain().focus().setImage({ src, alt }).run();
-        revokeImageProcessingResult(imageResult);
-      } catch {
-        if (imageResult) {
-          revokeImageProcessingResult(imageResult);
-        }
-        const fallbackUrl = await blobToDataUrl(file);
-        editor.chain().focus().setImage({ src: fallbackUrl, alt }).run();
-      }
+    (file: File) => {
+      editor?.chain().focus().insertImageFiles([file]).run();
     },
-    [editor, props.image, resolvedStorage, storageUpload],
+    [editor],
   );
 
-  const ctxValue = useMemo(
-    () => ({
-      editor,
-      aiConfig: resolvedAI,
-      storageConfig: resolvedStorage,
-      seoConfig: seo,
-      themeConfig: theme,
-      signals,
-    }),
-    [editor, resolvedAI, resolvedStorage, seo, theme, signals],
-  );
+  const ctxValue = useMemo(() => ({ editor, aiConfig: ai, seoConfig: seo, themeConfig: theme }), [editor, ai, seo, theme]);
+
+  const scoreBadge =
+    seo?.liveSignals !== false ? (
+      <ScoreBadge editor={editor} onClick={panelEnabled && !readOnly ? () => setDrawerOpen((open) => !open) : undefined} />
+    ) : undefined;
 
   return (
     <I18nContext.Provider value={i18nValue}>
@@ -204,50 +171,37 @@ export function Editor(props: EditorProps) {
           data-wf-theme={resolvedTheme.mode}
         >
           {!readOnly && (
-            <Toolbar
-              editor={editor}
-              onImageInsert={handleImageInsert}
-              themeMode={resolvedTheme.mode}
-            />
+            <Toolbar editor={editor} onImageInsert={handleImageInsert} themeMode={resolvedTheme.mode} trailing={scoreBadge} />
           )}
-          <SEOSignalIndicators signals={signals} />
 
-          <div style={{ position: 'relative' }}>
-            {editor && <EditorContent editor={editor} />}
+          <div className={`ip-body${drawerOpen && editor ? ' ip-body--drawer' : ''}`}>
+            <div ref={contentRef} className="ip-content">
+              {editor && <EditorContent editor={editor} />}
 
-            {!readOnly && (
-              <FloatingToolbar
+              {!readOnly && <IssuePopover editor={editor} containerRef={contentRef} canFix={!!transport} />}
+
+              {!readOnly && (
+                <FloatingToolbar editor={editor} enabled={!!transport} defaultTone={ai?.defaultTone} defaultIntent={ai?.defaultIntent} />
+              )}
+            </div>
+
+            {drawerOpen && editor && (
+              <PublishDrawer
                 editor={editor}
-                hasAI={!!resolvedAI}
-                onLiveRewrite={aiRewrite.liveRewrite}
-                onRevert={aiRewrite.revert}
-                isRewriting={aiRewrite.isRewriting}
-                isLive={aiRewrite.isLive}
-                defaultTone={resolvedAI?.defaultTone}
-                defaultIntent={resolvedAI?.defaultIntent}
-              />
-            )}
-
-            {!readOnly && !aiRewrite.isLive && (aiRewrite.isRewriting || aiRewrite.result) && (
-              <AIRewritePanel
-                isRewriting={aiRewrite.isRewriting}
-                diff={aiRewrite.diff}
-                result={aiRewrite.result}
-                onAccept={aiRewrite.accept}
-                onReject={aiRewrite.reject}
+                meta={effectiveMeta}
+                h1={h1}
+                onMetaChange={updateMeta}
+                transport={transport}
+                locale={seo?.locale ?? locale ?? 'en'}
+                keywords={seo?.keywords ?? []}
+                baseUrl={seo?.baseUrl}
+                rules={seo?.rules}
+                blockedMessage={blockedMessage}
+                onPublish={publish}
+                onClose={() => setDrawerOpen(false)}
               />
             )}
           </div>
-
-          {showSEOPanel && (
-            <SEOPanel
-              analysis={analysis ?? EMPTY_ANALYSIS}
-              serpPreview={serpPreview}
-              isAnalyzing={isAnalyzing}
-              onClose={() => setShowSEOPanel(false)}
-              onPublish={handlePublish}
-            />
-          )}
         </div>
       </InkpilotContext.Provider>
     </I18nContext.Provider>
