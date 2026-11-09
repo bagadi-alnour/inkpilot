@@ -5,6 +5,7 @@
 // Run after `npm run build`.
 import { build } from 'esbuild';
 import { gzipSync } from 'node:zlib';
+import { readFileSync } from 'node:fs';
 
 // Our own code plus turndown, about 24 kB. Syntax highlighting is opt-in (`codeBlock` prop),
 // so highlight.js grammars never count here.
@@ -32,6 +33,14 @@ for (const { entry, forbidden } of RULES) {
   if (bad.length) fail(`${entry} imports ${bad.join(', ')}`);
   else console.log(`✓ ${entry} imports only allowed packages`);
 }
+
+// Tiptap command declarations must survive type bundling, or `editor.commands.fixIssue`
+// and friends fail to typecheck in apps.
+const COMMANDS = ['startRewrite', 'rewriteSelection', 'acceptRewrite', 'fixIssue', 'ignoreIssue', 'refreshReport', 'insertImageFiles', 'suggestAltText', 'cancelUploads', 'requestPublish'];
+const types = readFileSync('dist/index.d.ts', 'utf8');
+const missing = COMMANDS.filter((name) => !new RegExp(`\\b${name}:`).test(types));
+if (missing.length) fail(`dist/index.d.ts lacks command types: ${missing.join(', ')}`);
+else console.log(`✓ dist/index.d.ts declares all ${COMMANDS.length} editor commands`);
 
 const client = await build({
   entryPoints: ['dist/index.js'],
