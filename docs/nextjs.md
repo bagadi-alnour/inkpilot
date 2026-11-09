@@ -26,7 +26,18 @@ export default function Page() {
 }
 ```
 
-Rate-limit `/api/inkpilot` in `middleware.ts` or at your platform's edge.
+Rate-limit `/api/inkpilot` in front of the handler. Answer with the protocol's error shape so the editor shows your message:
+
+```ts
+export async function POST(request: Request) {
+  if (!(await limiter.take(userOrIp(request)))) {
+    return Response.json({ error: { code: 'rate-limited', message: 'Too many AI requests. Try again in a minute.' } }, { status: 429 });
+  }
+  return handler(request);
+}
+```
+
+The App Router example does this with an in-memory limiter (`lib/rate-limit.ts`), which only works on a single server. On serverless or several instances, use your platform's limiter or a shared store such as Upstash.
 
 ## Pages Router
 

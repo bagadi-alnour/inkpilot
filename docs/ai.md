@@ -52,7 +52,7 @@ A proposal can be accepted only after `done`. If the model hits its token limit,
 Narrow tasks don't make the endpoint safe on their own. Callers control the article text, and a script can call the route in a loop.
 
 - Always pass a real `authorize`.
-- Rate-limit the route at your host.
+- Rate-limit the route at your host. Answer 429 with `{ error: { code: 'rate-limited', message } }` and the editor shows the message (see [Next.js](nextjs.md)).
 - Keep the size limits. Lower them if your articles are short.
 - When the client cancels (Stop, Esc, a new rewrite), the model call is aborted, so you don't pay for output nobody sees.
 
