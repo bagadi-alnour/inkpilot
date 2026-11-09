@@ -22,9 +22,9 @@ export type Tone = (typeof TONES)[number];
 export const INTENTS = ['simplify', 'expand', 'clarify'] as const;
 export type Intent = (typeof INTENTS)[number];
 
+/** Readability limits reach fix prompts through each issue's params, so only keywords travel here. */
 export interface SEOContext {
   keywords: string[];
-  readingGrade?: number;
 }
 
 interface ContentPayload {
