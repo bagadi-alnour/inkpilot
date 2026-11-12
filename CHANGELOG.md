@@ -5,7 +5,7 @@ All notable changes to `@inkpilot/editor` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - Unreleased
+## [0.2.0] - 2026-11-12
 
 SEO checks and AI now work as one loop: issues point at text, Fix with AI proposes a change in place, and you accept it as one undo step. You bring the model and the image storage. This release breaks the 0.1 API; see [Migrating from 0.1](#migrating-from-01).
 
